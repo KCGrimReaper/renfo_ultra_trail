@@ -42,9 +42,12 @@
             color: var(--ink);
         }
 
-        /* Fond photo : uniquement pendant l'exécution d'une séance */
+        /* Fond ambiance : appliqué en JS via variable, uniquement pendant l'exécution d'une séance */
         body.training-bg {
-            background: url('https://i.postimg.cc/HWZDhHbq/Gemini-Generated-Image-dype98dype98dype-(1)-(1).png') no-repeat center center fixed;
+            background-image: var(--ambiance-url);
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-attachment: fixed;
             background-size: cover;
         }
 
@@ -142,6 +145,9 @@
         .comp-legend span.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; }
         .ex-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 15px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
         .ex-row:last-child { border-bottom:none; }
+        .ex-row.compact { padding:10px 15px; }
+        .ex-row.compact .ex-row-info { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .ex-row.added { background: var(--bg); }
         .ex-row-info { flex-grow:1; min-width: 200px; }
         .ex-row-sub { font-size:0.8rem; color: var(--stone); margin-top:3px; }
         .ex-row-actions { display:flex; gap:6px; flex-shrink:0; }
@@ -163,6 +169,13 @@
 
         /* --- REGLAGES --- */
         .settings-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:15px; }
+        .ambiance-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin:10px 0 5px; }
+        .ambiance-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio: 4/3; border:2px solid transparent; background: var(--bg); }
+        .ambiance-item img { width:100%; height:100%; object-fit:cover; display:block; }
+        .ambiance-item.selected { border-color: var(--ink); }
+        .ambiance-item.selected::after { content:"✓"; position:absolute; top:4px; right:6px; background: var(--ink); color:#fff; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:900; }
+        .ambiance-item .amb-label { position:absolute; bottom:0; left:0; right:0; background: linear-gradient(transparent, rgba(43,38,32,0.85)); color:#fff; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:12px 6px 5px; letter-spacing:0.5px; }
+        .ambiance-item.neutral { display:flex; align-items:center; justify-content:center; background: linear-gradient(160deg, var(--ink), var(--wood)); color:var(--sand); font-size:0.65rem; font-weight:800; text-transform:uppercase; text-align:center; }
 
         /* --- BOTTOM BAR (pilule flottante) --- */
         #bottom-bar { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); width: min(520px, calc(100% - 24px)); background: var(--ink); border-radius: 20px; box-shadow: 0 8px 30px rgba(43,38,32,0.35); display: flex; z-index: 2000; padding: 6px; }
@@ -190,28 +203,39 @@
         .done-badge { background: #fff; color: var(--wood); border: 1px solid var(--wood); font-size: 0.6rem; font-weight: bold; padding: 3px 4px; border-radius: 4px; text-transform: uppercase; text-align: center; word-break: break-word; line-height: 1.2; margin-top: 3px; }
 
         /* --- PLAYER DE SÉANCE --- */
-        #player { position: fixed; inset: 0; background: linear-gradient(rgba(43,38,32,0.78), rgba(43,38,32,0.82)), url('https://i.postimg.cc/HWZDhHbq/Gemini-Generated-Image-dype98dype98dype-(1)-(1).png') no-repeat center center fixed; background-size: cover; z-index: 4000; display: none; flex-direction: column; color: #fff; padding: 20px; }
+        #player { position: fixed; inset: 0; background: linear-gradient(rgba(43,38,32,0.82), rgba(43,38,32,0.86)), var(--ambiance-url, none); background-repeat: no-repeat; background-position: center; background-size: cover; background-attachment: fixed; z-index: 4000; display: none; flex-direction: column; color: #fff; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); }
         #player.no-photo { background: linear-gradient(160deg, var(--ink) 0%, #4a3a28 100%); }
         #player.open { display: flex; }
-        .player-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .player-progress { flex-grow: 1; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; }
-        .player-progress-fill { height: 100%; background: var(--sand); border-radius: 3px; transition: width 0.3s; }
-        .player-counter { font-weight: 900; font-size: 0.8rem; letter-spacing: 1px; color: var(--sand); white-space: nowrap; }
-        .player-close { background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; cursor: pointer; }
-        .player-body { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 14px; overflow-y: auto; padding: 10px 0; }
-        .player-body h2 { margin: 0; font-size: 2rem; text-transform: uppercase; font-weight: 900; line-height: 1.15; }
-        .player-reps { font-size: 2.6rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--sand); }
-        .player-sub { font-size: 1.05rem; line-height: 1.5; color: rgba(255,255,255,0.85); max-width: 520px; }
-        .player-materiel { font-weight: 800; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; color: var(--sand); }
-        .player-rest { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; display: none; }
+
+        .player-top { display: flex; align-items: center; gap: 14px; }
+        .player-progress { flex-grow: 1; height: 4px; background: rgba(255,255,255,0.18); border-radius: 2px; overflow: hidden; }
+        .player-progress-fill { height: 100%; background: var(--sand); border-radius: 2px; transition: width 0.3s; }
+        .player-counter { font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+        .player-icon-btn { background: rgba(255,255,255,0.1); border: none; border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+        .player-icon-btn svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+        .player-icon-btn:hover { background: rgba(255,255,255,0.2); }
+        .player-icon-btn.big { width: 58px; height: 58px; }
+        .player-icon-btn.big svg { width: 26px; height: 26px; }
+
+        .player-body { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 10px; overflow-y: auto; padding: 20px 0; }
+        .player-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .player-body h2 { margin: 6px 0 0; font-size: 2.1rem; text-transform: uppercase; font-weight: 900; line-height: 1.1; }
+        .player-reps { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--sand); letter-spacing: 1px; }
+        .player-sub { font-size: 1.05rem; line-height: 1.5; color: rgba(255,255,255,0.82); max-width: 480px; }
+        .player-materiel { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: rgba(255,255,255,0.55); }
+
+        .player-rest-zone { min-height: 70px; display: flex; align-items: center; justify-content: center; }
+        .player-rest { font-size: 3.4rem; font-weight: 900; font-family: 'Courier New', monospace; color: #fff; display: none; }
         .player-rest.on { display: block; }
-        .player-rest-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .rest-btn { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 16px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
-        .rest-btn:hover { background: rgba(255,255,255,0.25); }
-        .player-nav { display: flex; gap: 12px; padding-top: 10px; }
-        .player-nav button { flex: 1; padding: 16px; border-radius: 12px; border: none; font-weight: 900; text-transform: uppercase; font-size: 0.9rem; cursor: pointer; }
-        .player-prev { background: rgba(255,255,255,0.12); color: #fff; }
-        .player-next { background: var(--sand); color: var(--ink); }
+
+        .player-bottom { display: flex; flex-direction: column; gap: 14px; }
+        .player-rest-inline { display: flex; gap: 8px; justify-content: center; }
+        .rest-chip { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 7px 16px; font-weight: 800; cursor: pointer; font-size: 0.8rem; font-family: 'Courier New', monospace; }
+        .rest-chip:hover { background: rgba(255,255,255,0.22); }
+        .rest-chip.stop { background: rgba(255,255,255,0.9); color: var(--ink); border-color: transparent; }
+        .player-nav { display: flex; gap: 12px; align-items: stretch; }
+        .player-next { flex-grow: 1; padding: 18px; border-radius: 14px; border: none; font-weight: 900; text-transform: uppercase; font-size: 0.95rem; cursor: pointer; background: var(--sand); color: var(--ink); letter-spacing: 0.5px; }
+        .player-next:hover { filter: brightness(1.05); }
     </style>
     </style>
 </head>
@@ -234,7 +258,7 @@
     </button>
     <button class="bb-item" id="bb-exercises-screen" onclick="switchScreen('exercises-screen')">
         <svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>
-        Exercices
+        Biblio
     </button>
     <button class="bb-item" id="bb-history-screen" onclick="switchScreen('history-screen')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
@@ -275,7 +299,6 @@
         <div class="card">
             <div class="header-box">
                 <h1 class="screen-title">Mon Planning</h1>
-                <button class="nav-btn" style="background:#444;" onclick="applyTemplate()">Générer Modèle</button>
             </div>
             
             <div class="cal-header-bar">
@@ -293,11 +316,7 @@
         <div class="top-nav">
             <button class="nav-btn" onclick="goHome()">❮ Retour</button>
             <h2 id="stitle"></h2>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="toggle-btn" id="bg-toggle" onclick="toggleTrainingBg()">Fond neutre</button>
-                <button class="toggle-btn" id="details-toggle" onclick="toggleDetails()">Masquer Détails</button>
-                <button class="immersion-btn" onclick="toggleFullScreen()">Immersion</button>
-            </div>
+            <span style="width:80px"></span>
         </div>
 
         <div class="card info-grid" id="details-block">
@@ -305,19 +324,11 @@
             <div class="info-box"><label>Résumé</label><div id="s-resume" class="info-content"></div></div>
         </div>
 
-        <div class="controls-grid">
-            <div class="card slim-timer"><small style="font-weight:900">HORLOGE</small><div id="clock" class="time-box">00:00:00</div></div>
-            <div class="card slim-timer">
-                <div style="display:flex; align-items:center">
-                    <small style="font-weight:900">CHRONO</small>
-                    <button class="chrono-btn" id="start-btn" onclick="toggleChrono()">DÉMARRER</button>
-                    <button class="chrono-btn" style="background:#777" onclick="resetChrono()">RESET</button>
-                </div>
-                <div id="chrono" class="time-box">00:00</div>
-            </div>
-        </div>
-
         <div class="card table-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-bottom:1px solid var(--line);">
+                <span style="font-weight:900; text-transform:uppercase; font-size:0.85rem;">Exercices</span>
+                <span id="session-duration" style="font-weight:800; font-size:0.8rem; color:var(--wood);"></span>
+            </div>
             <table>
                 <thead><tr><th>Exercice</th><th>Consigne</th><th>Reps</th><th>Matériel</th></tr></thead>
                 <tbody id="tbody"></tbody>
@@ -330,7 +341,10 @@
 
     <div id="builder-screen" class="screen">
         <div class="card" id="builder-session-card" style="display:none;">
-            <div class="day-header" style="grid-column:auto; margin-top:0;">Ma séance (<span id="builder-count">0</span> exercices)</div>
+            <div class="day-header" style="grid-column:auto; margin-top:0; display:flex; justify-content:space-between; align-items:baseline;">
+                <span>Ma séance (<span id="builder-count">0</span> exercices)</span>
+                <span id="builder-duration" style="font-size:0.8rem; color:var(--wood); border:none;"></span>
+            </div>
             <div class="comp-bar" id="builder-comp-bar"></div>
             <div class="comp-legend" id="builder-comp-legend"></div>
             <div id="builder-session-list"></div>
@@ -354,30 +368,29 @@
         </div>
 
         <div class="card">
-            <div class="header-box" style="margin-bottom:15px;">
-                <h1 class="screen-title">Construire</h1>
-            </div>
+            <div class="day-header" style="grid-column:auto; margin-top:0;">Partir d'un modèle</div>
+            <div id="template-list" style="margin-top:10px;"></div>
+        </div>
 
+        <div class="card">
+            <div class="header-box" style="margin-bottom:8px;">
+                <h1 class="screen-title">Ajouter des exercices</h1>
+            </div>
             <div class="search-row">
                 <input type="text" id="ex-search" class="text-input" placeholder="Rechercher un exercice..." oninput="renderExerciseCatalog()">
             </div>
             <div class="chip-row" id="cat-chips"></div>
-
+            <div style="font-weight:700; font-size:0.75rem; color:var(--muted); margin-bottom:8px;" id="ex-catalog-count"></div>
             <div class="table-card card" style="margin-bottom:0;">
                 <div id="ex-catalog"></div>
             </div>
-        </div>
-
-        <div class="card">
-            <div class="day-header" style="grid-column:auto; margin-top:0;">Modèles de séances</div>
-            <div id="template-list" style="margin-top:10px;"></div>
         </div>
     </div>
 
     <div id="exercises-screen" class="screen">
         <div class="card">
             <div class="header-box" style="margin-bottom:15px;">
-                <h1 class="screen-title">Exercices</h1>
+                <h1 class="screen-title">Bibliothèque</h1>
                 <button class="toggle-btn" onclick="toggleNewExForm()">Nouvel exercice</button>
             </div>
 
@@ -429,7 +442,13 @@
             <div class="header-box">
                 <h1 class="screen-title">Réglages</h1>
             </div>
-            <p style="font-weight:600;">Sauvegarde : tes données (planning, séances, historique) sont stockées dans ce navigateur. Lie un fichier de sauvegarde pour qu'elles s'y enregistrent automatiquement à chaque modification.</p>
+            <div class="day-header" style="grid-column:auto; margin-top:0;">Ambiance par défaut</div>
+            <p style="font-weight:600; margin-top:12px;">Choisis l'ambiance affichée en fond pendant la séance guidée. "Neutre" garde un fond sobre.</p>
+            <div class="ambiance-grid" id="ambiance-grid"></div>
+        </div>
+        <div class="card">
+            <div class="day-header" style="grid-column:auto; margin-top:0;">Sauvegarde</div>
+            <p style="font-weight:600; margin-top:12px;">Tes données (planning, séances, historique) sont stockées dans ce navigateur. Lie un fichier de sauvegarde pour qu'elles s'y enregistrent automatiquement à chaque modification.</p>
             <div class="settings-row">
                 <button class="nav-btn" id="link-backup-btn" onclick="linkBackupFile()">Lier un fichier de sauvegarde</button>
                 <span id="backup-status" style="font-weight:700; font-size:0.85rem;"></span>
@@ -446,27 +465,36 @@
 
 <div id="player">
     <div class="player-top">
-        <span class="player-counter" id="player-counter"></span>
+        <button class="player-icon-btn" onclick="closePlayer()" aria-label="Fermer">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
         <div class="player-progress"><div class="player-progress-fill" id="player-progress-fill"></div></div>
-        <button class="player-close" onclick="closePlayer()">Fermer</button>
+        <span class="player-counter" id="player-counter"></span>
     </div>
     <div class="player-body">
-        <div id="player-tags"></div>
+        <div id="player-tags" class="player-tags"></div>
         <h2 id="player-name"></h2>
         <div class="player-reps" id="player-reps"></div>
-        <div class="player-materiel" id="player-materiel"></div>
         <div class="player-sub" id="player-consigne"></div>
-        <div class="player-rest" id="player-rest">00:00</div>
-        <div class="player-rest-btns">
-            <button class="rest-btn" onclick="startRest(30)">Repos 30s</button>
-            <button class="rest-btn" onclick="startRest(60)">Repos 1min</button>
-            <button class="rest-btn" onclick="startRest(90)">Repos 1min30</button>
-            <button class="rest-btn" id="rest-stop" style="display:none;" onclick="stopRest()">Arrêter le repos</button>
+        <div class="player-materiel" id="player-materiel"></div>
+
+        <div class="player-rest-zone" id="player-rest-zone">
+            <div class="player-rest" id="player-rest">00:00</div>
         </div>
     </div>
-    <div class="player-nav">
-        <button class="player-prev" onclick="playerPrev()">Précédent</button>
-        <button class="player-next" id="player-next-btn" onclick="playerNext()">Suivant</button>
+    <div class="player-bottom">
+        <div class="player-rest-inline" id="player-rest-inline">
+            <button class="rest-chip" onclick="startRest(30)">30s</button>
+            <button class="rest-chip" onclick="startRest(60)">1:00</button>
+            <button class="rest-chip" onclick="startRest(90)">1:30</button>
+            <button class="rest-chip stop" id="rest-stop" style="display:none;" onclick="stopRest()">Stop</button>
+        </div>
+        <div class="player-nav">
+            <button class="player-icon-btn big" onclick="playerPrev()" aria-label="Précédent">
+                <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button class="player-next" id="player-next-btn" onclick="playerNext()">Suivant</button>
+        </div>
     </div>
 </div>
 
@@ -613,6 +641,32 @@
         return getCats(e).map(c => `<span class="cat-tag cat-${c}">${CAT_LABELS[c]}</span>`).join(" ");
     }
 
+    // --- DURÉE ESTIMÉE ---
+    // Auto : (séries × durée d'exécution) + (repos entre séries). Ajustable via e.dur (minutes) si défini.
+    const SEC_PER_REP = 4;        // ~4s par répétition
+    const SEC_PER_SEC_HOLD = 1;   // gainage/iso : 1s = 1s
+    const REST_BETWEEN_SETS = 45; // repos entre séries (s)
+
+    function estimateExerciseSeconds(e) {
+        if (typeof e.dur === 'number' && e.dur > 0) return e.dur * 60; // override manuel (min -> s)
+        const m = /^(\d+)\s*x\s*(\d+)\s*(s)?/i.exec(e.r || "");
+        if (!m) return 3 * 60; // défaut 3 min
+        const series = +m[1], val = +m[2], isHold = !!m[3];
+        const workPerSet = isHold ? val * SEC_PER_SEC_HOLD : val * SEC_PER_REP;
+        return series * workPerSet + (series - 1) * REST_BETWEEN_SETS;
+    }
+
+    function estimateListMinutes(exList) {
+        const sec = exList.reduce((acc, e) => acc + estimateExerciseSeconds(e), 0);
+        return Math.max(1, Math.round(sec / 60));
+    }
+
+    function fmtDuration(min) {
+        if (min < 60) return `${min} min`;
+        const h = Math.floor(min / 60), m = min % 60;
+        return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+    }
+
     function computeComposition(exList) {
         // Attribution fractionnée : un exo à 2 tags compte 0.5 dans chaque catégorie
         let counts = { force: 0, gainage: 0, plio: 0, proprio: 0 };
@@ -681,7 +735,28 @@
     }
 
     // --- NAVIGATION DE BASE ---
-    let trainingBgEnabled = localStorage.getItem('ultraTrainingBg') !== 'off';
+    // Ambiances disponibles (id -> {label, url}). "neutral" = dégradé sobre.
+    const AMBIANCES = {
+        neutral: { label: "Neutre", url: null },
+        chalet:  { label: "Chalet", url: "https://i.postimg.cc/HWZDhHbq/Gemini-Generated-Image-dype98dype98dype-(1)-(1).png" }
+    };
+    let currentAmbiance = localStorage.getItem('ultraAmbiance') || 'chalet';
+    if (!AMBIANCES[currentAmbiance]) currentAmbiance = 'chalet';
+
+    function ambianceUrl() {
+        const a = AMBIANCES[currentAmbiance];
+        return a && a.url ? a.url : null;
+    }
+
+    function setAmbiance(id) {
+        if (!AMBIANCES[id]) return;
+        currentAmbiance = id;
+        localStorage.setItem('ultraAmbiance', id);
+        const url = ambianceUrl();
+        document.documentElement.style.setProperty('--ambiance-url', url ? `url('${url}')` : 'none');
+        applyTrainingBg(document.getElementById('session-screen').classList.contains('active'));
+        renderAmbiancePicker();
+    }
 
     function switchScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -695,19 +770,13 @@
         if(screenId === 'builder-screen') { renderExerciseCatalog(); renderBuilderSession(); renderTemplates(); }
         if(screenId === 'exercises-screen') renderExerciseManager();
         if(screenId === 'history-screen') renderHistoryScreen();
+        if(screenId === 'settings-screen') renderAmbiancePicker();
         window.scrollTo(0, 0);
     }
 
     function applyTrainingBg(inSession) {
-        document.body.classList.toggle('training-bg', inSession && trainingBgEnabled);
-        const btn = document.getElementById('bg-toggle');
-        if (btn) btn.innerText = trainingBgEnabled ? "Fond neutre" : "Fond photo";
-    }
-
-    function toggleTrainingBg() {
-        trainingBgEnabled = !trainingBgEnabled;
-        localStorage.setItem('ultraTrainingBg', trainingBgEnabled ? 'on' : 'off');
-        applyTrainingBg(document.getElementById('session-screen').classList.contains('active'));
+        const hasPhoto = inSession && ambianceUrl();
+        document.body.classList.toggle('training-bg', !!hasPhoto);
     }
 
     function goHome() { switchScreen('home-screen'); }
@@ -721,10 +790,7 @@
         document.getElementById('stitle').innerText = s.t;
         document.getElementById('s-concept').innerText = s.concept;
         document.getElementById('s-resume').innerText = s.resume;
-        
-        document.getElementById('details-block').classList.remove('collapsed');
-        document.getElementById('details-toggle').innerText = "Masquer Détails";
-        
+
         renderExercises();
         switchScreen('session-screen');
         window.scrollTo(0, 0);
@@ -738,13 +804,8 @@
             h += `<tr><td><b style="color:var(--ink)">${cleanName(e.n)}</b> ${catTagsHtml(e)}</td><td>${e.c || ""}</td><td><b>${e.r}</b></td><td>${e.m || ""}</td></tr>`;
         });
         document.getElementById('tbody').innerHTML = h;
-    }
-
-    function toggleDetails() {
-        const b = document.getElementById('details-block');
-        const t = document.getElementById('details-toggle');
-        if (b.classList.contains('collapsed')) { b.classList.remove('collapsed'); t.innerText = "Masquer Détails"; } 
-        else { b.classList.add('collapsed'); t.innerText = "Afficher Détails"; }
+        const durEl = document.getElementById('session-duration');
+        if (durEl) durEl.innerText = "≈ " + fmtDuration(estimateListMinutes(s.ex));
     }
 
     // --- CALENDRIER & PLANIFICATION ---
@@ -833,48 +894,6 @@
         renderCalendar();
     }
 
-    function getWeekNumber(d) {
-        let date = new Date(d.getTime());
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-        let week1 = new Date(date.getFullYear(), 0, 4);
-        return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-    }
-
-    let templateConfirmPending = false;
-    function applyTemplate() {
-        const btn = document.querySelector('#calendar-screen .header-box .nav-btn');
-        if (!templateConfirmPending) {
-            templateConfirmPending = true;
-            btn.innerText = "Confirmer ? (remplace le mois)";
-            setTimeout(() => { templateConfirmPending = false; btn.innerText = "Générer Modèle"; }, 4000);
-            return;
-        }
-        templateConfirmPending = false;
-        btn.innerText = "Générer Modèle";
-        
-        const year = calDate.getFullYear();
-        const month = calDate.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        for(let i=1; i<=daysInMonth; i++) {
-            let d = new Date(year, month, i);
-            let dayOfWeek = d.getDay(); // 0=Dim, 1=Lun, 4=Jeu, 5=Ven
-            
-            let weekNum = getWeekNumber(d);
-            let isWeekA = (weekNum % 2 !== 0); 
-            
-            let dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-            
-            if(dayOfWeek === 1) plannedData[dateStr] = { id: isWeekA ? 'L1A' : 'L1B' };
-            if(dayOfWeek === 4) plannedData[dateStr] = { id: isWeekA ? 'J2A' : 'J2B' };
-            if(dayOfWeek === 5) plannedData[dateStr] = { id: isWeekA ? 'V3A' : 'V3B' };
-        }
-        localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
-        autoBackup();
-        renderCalendar();
-    }
-
     function startPlannedSession() {
         let dateStr = document.getElementById('modal-date-val').value;
         let plan = plannedData[dateStr];
@@ -882,17 +901,6 @@
             closePlanModal();
             openSession(plan.id);
         }
-    }
-
-    // --- IMMERSION & CHRONO ---
-    function toggleFullScreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().then(() => {
-                const b = document.getElementById('details-block');
-                const t = document.getElementById('details-toggle');
-                if (b && !b.classList.contains('collapsed')) { b.classList.add('collapsed'); t.innerText = "Afficher Détails"; }
-            }).catch(err => { console.log(err.message); });
-        } else { if (document.exitFullscreen) document.exitFullscreen(); }
     }
 
     // --- CONSTRUCTEUR : catalogue filtrable + séance manuelle ---
@@ -931,6 +939,10 @@
             (!q || cleanName(e.n).toLowerCase().includes(q) || (e.c || "").toLowerCase().includes(q))
         );
 
+        // Compteur de résultats
+        const countEl = document.getElementById('ex-catalog-count');
+        if (countEl) countEl.innerText = `${filtered.length} exercice${filtered.length > 1 ? 's' : ''}`;
+
         if (filtered.length === 0) {
             listEl.innerHTML = `<div class="empty-hint">Aucun exercice ne correspond au filtre.</div>`;
             return;
@@ -942,22 +954,21 @@
             const hasMateriel = e.m && e.m.toLowerCase() !== "aucun";
             const panelOpen = openAddPanelId === e.id;
             return `
-            <div class="ex-row">
+            <div class="ex-row compact${added ? " added" : ""}">
                 <div class="ex-row-info">
-                    ${catTagsHtml(e)}
-                    <b> ${cleanName(e.n)}</b>
-                    <div class="ex-row-sub">${e.c || ""}${e.m ? " — " + e.m : ""}</div>
+                    <b>${cleanName(e.n)}</b> ${catTagsHtml(e)}
                 </div>
                 <div class="ex-row-actions">
                     ${added
-                        ? `<button class="mini-btn" onclick="removeFromSessionById('${e.id}')">Retirer</button>`
-                        : `<button class="mini-btn" onclick="openAddPanel('${e.id}')">Ajouter</button>`}
+                        ? `<button class="mini-btn" onclick="removeFromSessionById('${e.id}')">✓ Ajouté</button>`
+                        : `<button class="mini-btn" onclick="openAddPanel('${e.id}')">+ Ajouter</button>`}
                 </div>
                 <div class="add-panel${panelOpen ? " open" : ""}" id="panel-${e.id}">
+                    <div class="ex-row-sub" style="margin-bottom:10px;">${e.c || ""}${hasMateriel ? " — " + e.m : ""}</div>
                     <div class="add-panel-grid">
                         <div><label>Séries</label><input type="number" min="1" max="10" value="${def.series}" id="series-${e.id}" class="text-input"></div>
                         <div><label>Reps</label><input type="number" min="1" max="100" value="${def.reps}" id="reps-${e.id}" class="text-input"></div>
-                        ${hasMateriel ? `<div><label>Charge / détail (${e.m})</label><input type="text" placeholder="Ex : 2x5kg, élastique fort" id="detail-${e.id}" class="text-input"></div>` : ""}
+                        ${hasMateriel ? `<div><label>Charge / détail</label><input type="text" placeholder="Ex : 2x5kg, élastique fort" id="detail-${e.id}" class="text-input"></div>` : ""}
                     </div>
                     <button class="nav-btn" onclick="confirmAdd('${e.id}')">Ajouter à la séance</button>
                     <span id="add-status-${e.id}" style="font-weight:700; font-size:0.75rem; margin-left:10px; color:var(--wood);"></span>
@@ -1021,6 +1032,8 @@
         if (currentBuilderList.length === 0) return;
 
         document.getElementById('builder-count').innerText = currentBuilderList.length;
+        const durEl = document.getElementById('builder-duration');
+        if (durEl) durEl.innerText = "≈ " + fmtDuration(estimateListMinutes(currentBuilderList));
         renderCompositionBar('builder-comp-bar', 'builder-comp-legend', currentBuilderList);
 
         document.getElementById('builder-session-list').innerHTML = currentBuilderList.map((e, idx) => `
@@ -1276,11 +1289,12 @@
 
     function templateRowHtml(id, name, count) {
         const planOpen = planTplOpenId === id;
+        const dur = fmtDuration(estimateListMinutes(customTemplates[id].ex));
         return `
             <div class="ex-row">
                 <div class="ex-row-info">
                     <b>${name}</b>
-                    <div class="ex-row-sub">${count} exercices</div>
+                    <div class="ex-row-sub">${count} exercices · ≈ ${dur}</div>
                 </div>
                 <div class="ex-row-actions">
                     <button class="mini-btn" onclick="loadTemplate('${id}')">Charger</button>
@@ -1425,25 +1439,54 @@
     }
 
     // --- HISTORIQUE ---
+    function historyDominant(h) {
+        // Catégorie majoritaire d'une séance passée
+        let best = null, bestVal = -1;
+        CAT_LIST.forEach(c => { const v = h.comp[c] || 0; if (v > bestVal) { bestVal = v; best = c; } });
+        return bestVal > 0 ? best : null;
+    }
+
+    function fmtHistDate(dateStr) {
+        const d = new Date(dateStr + 'T12:00:00');
+        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+
     function renderHistoryScreen() {
         const listEl = document.getElementById('history-list');
         if (history.length === 0) {
             listEl.innerHTML = `<div class="empty-hint">Aucune séance terminée pour l'instant.</div>`;
         } else {
-            listEl.innerHTML = history.map((h, idx) => `
-                <div class="hist-row">
-                    <span class="hist-date">${h.date}</span>
-                    <span class="hist-title">${h.title}</span>
-                    ${getData(h.id) ? `<button class="mini-btn" onclick="openSession('${h.id}')">Relancer</button>` : ""}
-                    <button class="mini-btn" id="del-hist-${idx}" onclick="deleteHistoryEntry(${idx})">Supprimer</button>
-                </div>
-            `).join("");
+            // Regroupement par mois (le plus récent d'abord)
+            const groups = {};
+            history.forEach((h, idx) => {
+                const key = h.date.slice(0, 7);
+                (groups[key] = groups[key] || []).push({ h, idx });
+            });
+            const monthLabel = (key) => {
+                const [y, m] = key.split('-');
+                return new Date(+y, +m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+            };
+
+            listEl.innerHTML = Object.keys(groups).sort().reverse().map(key => {
+                const rows = groups[key].map(({ h, idx }) => {
+                    const dom = historyDominant(h);
+                    const tag = dom ? `<span class="cat-tag cat-${dom}">${CAT_LABELS[dom]}</span>` : "";
+                    return `
+                        <div class="hist-row">
+                            <span class="hist-date">${fmtHistDate(h.date)}</span>
+                            <span class="hist-title">${h.title} ${tag}</span>
+                            ${getData(h.id) ? `<button class="mini-btn" onclick="openSession('${h.id}')">Relancer</button>` : ""}
+                            <button class="mini-btn" id="del-hist-${idx}" onclick="deleteHistoryEntry(${idx})">Supprimer</button>
+                        </div>`;
+                }).join("");
+                return `<div class="day-header" style="grid-column:auto; margin:15px 20px 0; padding-bottom:8px;">${monthLabel(key)} · ${groups[key].length} séance${groups[key].length > 1 ? 's' : ''}</div>${rows}`;
+            }).join("");
         }
 
         // Composition cumulée
         let allEx = [];
         history.forEach(h => {
-            CAT_LIST.forEach(c => { for (let i = 0; i < (h.comp[c] || 0); i++) allEx.push({ cat: c }); });
+            CAT_LIST.forEach(c => { for (let i = 0; i < Math.round(h.comp[c] || 0); i++) allEx.push({ cat: c }); });
         });
         renderCompositionBar('history-comp-bar', 'history-comp-legend', allEx.length ? allEx : CAT_LIST.map(c => ({ cat: c, _empty: true })));
         if (allEx.length === 0) { document.getElementById('history-comp-bar').innerHTML = `<div class="empty-hint" style="flex-grow:1;">Pas encore de données</div>`; }
@@ -1613,7 +1656,7 @@
         if (!s || !s.ex.length) return;
         playerIndex = 0;
         const p = document.getElementById('player');
-        p.classList.toggle('no-photo', !trainingBgEnabled);
+        p.classList.toggle('no-photo', !ambianceUrl());
         p.classList.add('open');
         renderPlayer();
     }
@@ -1629,14 +1672,14 @@
         const e = s.ex[playerIndex];
         const total = s.ex.length;
 
-        document.getElementById('player-counter').innerText = `Exercice ${playerIndex + 1} / ${total}`;
+        document.getElementById('player-counter').innerText = `${playerIndex + 1}/${total}`;
         document.getElementById('player-progress-fill').style.width = `${((playerIndex + 1) / total) * 100}%`;
         document.getElementById('player-tags').innerHTML = catTagsHtml(e);
         document.getElementById('player-name').innerText = cleanName(e.n);
         document.getElementById('player-reps').innerText = e.r || "";
         document.getElementById('player-materiel').innerText = e.m && e.m.toLowerCase() !== "aucun" ? e.m : "";
         document.getElementById('player-consigne').innerText = e.c || "";
-        document.getElementById('player-next-btn').innerText = (playerIndex === total - 1) ? "Terminer la séance" : "Suivant";
+        document.getElementById('player-next-btn').innerText = (playerIndex === total - 1) ? "Terminer" : "Suivant";
     }
 
     function playerNext() {
@@ -1690,6 +1733,22 @@
         if (e.key === 'ArrowLeft') playerPrev();
     });
 
+    function renderAmbiancePicker() {
+        const grid = document.getElementById('ambiance-grid');
+        if (!grid) return;
+        grid.innerHTML = Object.keys(AMBIANCES).map(id => {
+            const a = AMBIANCES[id];
+            const sel = id === currentAmbiance ? " selected" : "";
+            if (!a.url) {
+                return `<div class="ambiance-item neutral${sel}" onclick="setAmbiance('${id}')">${a.label}</div>`;
+            }
+            return `<div class="ambiance-item${sel}" onclick="setAmbiance('${id}')">
+                <img src="${a.url}" alt="${a.label}" loading="lazy">
+                <span class="amb-label">${a.label}</span>
+            </div>`;
+        }).join("");
+    }
+
     // --- FERMETURE GLOBALE (clic à côté / Échap) ---
     function closeAllPanels() {
         let changed = false;
@@ -1723,16 +1782,7 @@
     renderExerciseCatalog();
     renderTemplates();
     restoreBackupHandle();
-
-    setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR'); }, 1000);
-
-    let chronoInt, secs = 0, running = false;
-    function toggleChrono() {
-        const b = document.getElementById('start-btn');
-        if (running) { clearInterval(chronoInt); b.innerText = "REPRENDRE"; running = false; } 
-        else { running = true; b.innerText = "PAUSE"; chronoInt = setInterval(() => { secs++; let m = Math.floor(secs / 60), s = secs % 60; document.getElementById('chrono').textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s); }, 1000); }
-    }
-    function resetChrono() { clearInterval(chronoInt); secs = 0; running = false; document.getElementById('start-btn').innerText = "DÉMARRER"; document.getElementById('chrono').textContent = "00:00"; }
+    setAmbiance(currentAmbiance);
 </script>
 
 </body>
