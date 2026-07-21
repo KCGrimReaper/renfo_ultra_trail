@@ -112,21 +112,18 @@
             .plan-badge { font-size: 0.55rem; }
         }
 
-        /* --- CATEGORIES (constructeur / historique) --- */
-        :root { --c-force:#b30000; --c-gainage:#0056b3; --c-plio:#c9720b; --c-proprio:#1a7a3c; }
-        .cat-tag { display:inline-block; color:#fff; font-size:0.65rem; font-weight:900; text-transform:uppercase; padding:3px 8px; border-radius:5px; letter-spacing:0.5px; }
+        /* --- CATEGORIES (constructeur / historique) — palette monochrome --- */
+        :root { --c-force:#1a1a1a; --c-gainage:#4d4d4d; --c-plio:#808080; --c-proprio:#b3b3b3; }
+        .cat-tag { display:inline-block; color:#fff; font-size:0.65rem; font-weight:900; text-transform:uppercase; padding:3px 8px; border-radius:4px; letter-spacing:0.5px; }
         .cat-force { background: var(--c-force); }
         .cat-gainage { background: var(--c-gainage); }
         .cat-plio { background: var(--c-plio); }
-        .cat-proprio { background: var(--c-proprio); }
+        .cat-proprio { background: var(--c-proprio); color:#000; }
 
         /* --- CONSTRUCTEUR --- */
         .chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; }
-        .chip { padding:8px 14px; border-radius:20px; border:2px solid #000; cursor:pointer; font-weight:800; font-size:0.8rem; text-transform:uppercase; background: rgba(255,255,255,0.5); transition:0.2s; user-select:none; }
-        .chip.active.chip-force { background: var(--c-force); color:#fff; border-color: var(--c-force); }
-        .chip.active.chip-gainage { background: var(--c-gainage); color:#fff; border-color: var(--c-gainage); }
-        .chip.active.chip-plio { background: var(--c-plio); color:#fff; border-color: var(--c-plio); }
-        .chip.active.chip-proprio { background: var(--c-proprio); color:#fff; border-color: var(--c-proprio); }
+        .chip { padding:8px 14px; border-radius:6px; border:1px solid #000; cursor:pointer; font-weight:800; font-size:0.75rem; text-transform:uppercase; background: rgba(255,255,255,0.6); color:#000; transition:0.2s; user-select:none; }
+        .chip.active { background:#000; color:#fff; }
         .slider-field { margin-bottom: 18px; }
         .slider-field label { display:flex; justify-content:space-between; font-weight:900; text-transform:uppercase; font-size:0.75rem; margin-bottom:8px; color:#333; }
         .slider-field input[type=range] { width:100%; }
@@ -138,96 +135,75 @@
         .ex-row:last-child { border-bottom:none; }
         .ex-row-info { flex-grow:1; }
         .ex-row-actions { display:flex; gap:6px; flex-shrink:0; }
-        .icon-btn { background:#000; color:#fff; border:none; width:30px; height:30px; border-radius:6px; cursor:pointer; font-size:0.9rem; }
-        .icon-btn.remove { background:#b30000; }
+        .mini-btn { background: rgba(255,255,255,0.8); color:#000; border:1px solid #000; padding:5px 10px; border-radius:5px; cursor:pointer; font-weight:bold; text-transform:uppercase; font-size:0.65rem; }
+        .mini-btn:hover { background:#000; color:#fff; }
         .text-input { width:100%; padding:10px; font-family:inherit; font-size:1rem; border:1px solid #ccc; border-radius:6px; }
         .empty-hint { padding:20px; text-align:center; color:rgba(0,0,0,0.5); font-weight:600; }
 
         /* --- HISTORIQUE --- */
-        .hist-row { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; border-bottom:1px solid rgba(0,0,0,0.1); }
+        .hist-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid rgba(0,0,0,0.1); flex-wrap:wrap; }
         .hist-date { font-weight:900; font-size:0.85rem; min-width:90px; }
         .hist-title { flex-grow:1; font-weight:700; padding: 0 10px; }
 
         /* --- REGLAGES --- */
         .settings-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:15px; }
+
+        /* --- BOTTOM BAR --- */
+        body { padding-bottom: 90px; }
+        #bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,0.95); border-top: 1px solid rgba(0,0,0,0.15); box-shadow: 0 -5px 20px rgba(0,0,0,0.15); display: flex; z-index: 2000; }
+        .bb-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px 12px; cursor: pointer; color: #666; font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border: none; background: transparent; }
+        .bb-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .bb-item.active { color: #000; }
+        .bb-item.active::after { content:""; width: 18px; height: 3px; background: #000; border-radius: 2px; margin-top: 2px; }
+
+        /* --- CALENDRIER : jour courant + séances faites --- */
+        .cal-day.today { border: 2px solid #000; background: rgba(255,255,255,0.95); }
+        .cal-day.today .day-num { color:#000; }
+        .done-badge { background: #fff; color: #000; border: 1px solid #000; font-size: 0.6rem; font-weight: bold; padding: 3px 4px; border-radius: 4px; text-transform: uppercase; text-align: center; word-break: break-word; line-height: 1.2; margin-top: 3px; }
     </style>
 </head>
 <body>
 
-<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div id="sidebar-overlay" onclick="closePlanModal()"></div>
 
-<div id="sidebar">
-    <div class="sidebar-item" onclick="switchScreen('home-screen'); toggleSidebar();" style="border: 2px solid #000; text-align: center; margin-bottom: 10px;">ACCUEIL</div>
-    <div class="sidebar-item" onclick="switchScreen('calendar-screen'); toggleSidebar();" style="background: rgba(0,0,0,0.1); text-align: center; margin-bottom: 10px;">PLANNING</div>
-    <div class="sidebar-item" onclick="switchScreen('builder-screen'); toggleSidebar();" style="background: rgba(0,0,0,0.1); text-align: center; margin-bottom: 10px;">CONSTRUCTEUR</div>
-    <div class="sidebar-item" onclick="switchScreen('history-screen'); toggleSidebar();" style="background: rgba(0,0,0,0.1); text-align: center; margin-bottom: 10px;">HISTORIQUE</div>
-    <div class="sidebar-item" onclick="switchScreen('settings-screen'); toggleSidebar();" style="background: rgba(0,0,0,0.1); text-align: center; margin-bottom: 10px;">RÉGLAGES</div>
-
-    <div class="sidebar-title">Puissance / Gainage</div>
-    <div class="sidebar-item" onclick="openSession('L1A'); toggleSidebar();">La forge verticale</div>
-    <div class="sidebar-item" onclick="openSession('L1B'); toggleSidebar();">Le châssis tout-terrain</div>
-
-    <div class="sidebar-title">Pliométrie</div>
-    <div class="sidebar-item" onclick="openSession('J2A'); toggleSidebar();">L'amortisseur d'impacts</div>
-    <div class="sidebar-item" onclick="openSession('J2B'); toggleSidebar();">Le danseur des crêtes</div>
-
-    <div class="sidebar-title">Prévention</div>
-    <div class="sidebar-item" onclick="openSession('V3A'); toggleSidebar();">Le bouclier tendineux</div>
-    <div class="sidebar-item" onclick="openSession('V3B'); toggleSidebar();">Le pilote automatique</div>
-</div>
+<nav id="bottom-bar">
+    <button class="bb-item active" id="bb-home-screen" onclick="switchScreen('home-screen')">
+        <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+        Accueil
+    </button>
+    <button class="bb-item" id="bb-calendar-screen" onclick="switchScreen('calendar-screen')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        Planning
+    </button>
+    <button class="bb-item" id="bb-builder-screen" onclick="switchScreen('builder-screen')">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/><rect x="2" y="2" width="20" height="20" rx="4"/></svg>
+        Construire
+    </button>
+    <button class="bb-item" id="bb-history-screen" onclick="switchScreen('history-screen')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        Historique
+    </button>
+    <button class="bb-item" id="bb-settings-screen" onclick="switchScreen('settings-screen')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z"/></svg>
+        Réglages
+    </button>
+</nav>
 
 <div class="container">
     <div id="home-screen" class="screen active">
         <div class="card">
             <div class="header-box">
-                <button class="nav-btn" onclick="toggleSidebar()">☰ MENU</button>
-                <h1 class="screen-title">Renforcement ULTRA-TRAIL</h1>
+                <h1 class="screen-title" style="color:#000; text-shadow:none;">Renforcement ULTRA-TRAIL</h1>
                 <button class="nav-btn" onclick="toggleFullScreen()">Immersion</button>
             </div>
-            
-            <div class="menu-grid">
-                <div class="day-header">Puissance / Gainage</div>
-                <button class="btn-session" onclick="openSession('L1A')">
-                    <span class="s-title">La forge verticale</span>
-                    <span class="s-subtitle">Force brute et propulsion en montée</span>
-                </button>
-                <button class="btn-session" onclick="openSession('L1B')">
-                    <span class="s-title">Le châssis tout-terrain</span>
-                    <span class="s-subtitle">Stabilité latérale et gainage dynamique</span>
-                </button>
-
-                <div class="day-header">Pliométrie</div>
-                <button class="btn-session" onclick="openSession('J2A')">
-                    <span class="s-title">L'amortisseur d'impacts</span>
-                    <span class="s-subtitle">Préparation au choc des descentes</span>
-                </button>
-                <button class="btn-session" onclick="openSession('J2B')">
-                    <span class="s-title">Le danseur des crêtes</span>
-                    <span class="s-subtitle">Agilité et changements d'appuis rapides</span>
-                </button>
-
-                <div class="day-header">Prévention / Proprioception</div>
-                <button class="btn-session" onclick="openSession('V3A')">
-                    <span class="s-title">Le bouclier tendineux</span>
-                    <span class="s-subtitle">Solidité des tendons et prévention blessure</span>
-                </button>
-                <button class="btn-session" onclick="openSession('V3B')">
-                    <span class="s-title">Le pilote automatique</span>
-                    <span class="s-subtitle">Proprioception et réflexes d'équilibre</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="card" id="custom-home-card" style="display:none;">
-            <div class="day-header" style="grid-column:auto; margin-top:0;">Mes séances (constructeur)</div>
-            <div class="menu-grid" id="custom-home-list" style="margin-top:15px;"></div>
+            <div id="home-date" style="font-weight:800; text-transform:uppercase; font-size:0.8rem; color:rgba(0,0,0,0.5); margin-bottom:15px;"></div>
+            <div id="home-today"></div>
         </div>
     </div>
 
     <div id="calendar-screen" class="screen">
         <div class="card">
             <div class="header-box">
-                <button class="nav-btn" onclick="toggleSidebar()">☰ MENU</button>
                 <h1 class="screen-title">Mon Planning</h1>
                 <button class="nav-btn" style="background:#444;" onclick="applyTemplate()">Générer Modèle</button>
             </div>
@@ -245,7 +221,7 @@
 
     <div id="session-screen" class="screen">
         <div class="top-nav">
-            <button class="nav-btn" onclick="toggleSidebar()">☰ MENU</button>
+            <button class="nav-btn" onclick="goHome()">❮ Retour</button>
             <h2 id="stitle"></h2>
             <div style="display:flex; gap:10px">
                 <button class="toggle-btn" id="details-toggle" onclick="toggleDetails()">Masquer Détails</button>
@@ -258,9 +234,10 @@
             <div class="info-box"><label>Résumé</label><div id="s-resume" class="info-content"></div></div>
         </div>
 
-        <div class="card slider-field" style="padding-top:15px; padding-bottom:5px;">
-            <label>Intensité <span id="intensity-label">5/10 · Intermédiaire</span></label>
-            <input type="range" min="1" max="10" value="5" id="intensity-slider" oninput="setIntensity(this.value)">
+        <div class="level-picker">
+            <button class="level-btn active" id="btn-std" onclick="changeLevel('std')">Standard</button>
+            <button class="level-btn" id="btn-inter" onclick="changeLevel('inter')">Intermédiaire</button>
+            <button class="level-btn" id="btn-expert" onclick="changeLevel('expert')">Expert</button>
         </div>
 
         <div class="controls-grid">
@@ -282,15 +259,13 @@
             </table>
         </div>
 
-        <button class="nav-btn btn-full" id="done-btn" style="background:#1a7a3c; margin-top:15px;" onclick="markSessionDone()">✅ Terminer la séance</button>
+        <button class="nav-btn btn-full" id="done-btn" style="margin-top:15px;" onclick="markSessionDone()">Terminer la séance</button>
     </div>
 
     <div id="builder-screen" class="screen">
         <div class="card">
             <div class="header-box">
-                <button class="nav-btn" onclick="toggleSidebar()">☰ MENU</button>
-                <h1 class="screen-title">Constructeur</h1>
-                <span style="width:80px"></span>
+                <h1 class="screen-title" style="color:#000; text-shadow:none;">Constructeur</h1>
             </div>
 
             <label style="display:block; font-weight:900; text-transform:uppercase; font-size:0.75rem; margin-bottom:8px;">Objectifs (catégories)</label>
@@ -301,12 +276,7 @@
                 <input type="range" min="3" max="14" value="6" id="count-slider" oninput="document.getElementById('count-label').innerText=this.value">
             </div>
 
-            <div class="slider-field">
-                <label>Intensité <span id="builder-intensity-label">5/10 · Intermédiaire</span></label>
-                <input type="range" min="1" max="10" value="5" id="builder-intensity-slider" oninput="updateBuilderIntensityLabel(this.value)">
-            </div>
-
-            <button class="nav-btn btn-full" onclick="generateSession()">🎲 Générer la séance</button>
+            <button class="nav-btn btn-full" onclick="generateSession()">Générer la séance</button>
         </div>
 
         <div class="card" id="builder-result-card" style="display:none;">
@@ -318,20 +288,23 @@
                 <div id="builder-ex-list"></div>
             </div>
 
-            <div class="modal-field" style="margin-top:15px;">
-                <label>Nom de la séance</label>
-                <input type="text" id="builder-session-name" class="text-input" placeholder="Ex : Force + Plio jambes">
+            <div class="modal-actions">
+                <button class="nav-btn btn-full" onclick="launchBuiltSession()">Lancer maintenant</button>
             </div>
-            <button class="nav-btn btn-full" style="background:#1a7a3c;" onclick="saveCustomSession()">💾 Enregistrer comme séance</button>
+            <div class="modal-field" style="margin-top:15px;">
+                <label>Ou planifier pour le</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="date" id="builder-plan-date" class="text-input" style="flex-grow:1;">
+                    <button class="toggle-btn" onclick="planBuiltSession()">Planifier</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="history-screen" class="screen">
         <div class="card">
             <div class="header-box">
-                <button class="nav-btn" onclick="toggleSidebar()">☰ MENU</button>
-                <h1 class="screen-title">Historique</h1>
-                <span style="width:80px"></span>
+                <h1 class="screen-title" style="color:#000; text-shadow:none;">Historique</h1>
             </div>
             <div class="day-header" style="grid-column:auto; margin-top:0;">Répartition cumulée</div>
             <div class="comp-bar" id="history-comp-bar"></div>
@@ -345,14 +318,16 @@
     <div id="settings-screen" class="screen">
         <div class="card">
             <div class="header-box">
-                <button class="nav-btn" onclick="toggleSidebar()">☰ MENU</button>
-                <h1 class="screen-title">Réglages</h1>
-                <span style="width:80px"></span>
+                <h1 class="screen-title" style="color:#000; text-shadow:none;">Réglages</h1>
             </div>
-            <p style="font-weight:600;">Sauvegarde locale : ton planning, tes séances personnalisées et ton historique sont stockés uniquement dans ce navigateur. Exporte régulièrement pour ne rien perdre (changement de téléphone, nettoyage du cache...).</p>
+            <p style="font-weight:600;">Sauvegarde : tes données (planning, séances, historique) sont stockées dans ce navigateur. Lie un fichier de sauvegarde pour qu'elles s'y enregistrent automatiquement à chaque modification.</p>
             <div class="settings-row">
-                <button class="nav-btn" onclick="exportAllData()">⬇ Exporter (JSON)</button>
-                <button class="toggle-btn" onclick="document.getElementById('import-file').click()">⬆ Importer</button>
+                <button class="nav-btn" id="link-backup-btn" onclick="linkBackupFile()">Lier un fichier de sauvegarde</button>
+                <span id="backup-status" style="font-weight:700; font-size:0.85rem;"></span>
+            </div>
+            <div class="settings-row">
+                <button class="toggle-btn" onclick="exportAllData()">Exporter (manuel)</button>
+                <button class="toggle-btn" onclick="document.getElementById('import-file').click()">Importer</button>
                 <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importAllData(event)">
             </div>
             <div id="import-status" style="font-weight:700; margin-top:10px;"></div>
@@ -542,13 +517,7 @@
 
     function saveCustomSessions() {
         localStorage.setItem('ultraCustomSessions', JSON.stringify(customSessions));
-    }
-
-    function deleteCustomSession(id) {
-        delete customSessions[id];
-        saveCustomSessions();
-        renderCustomHome();
-        refreshModalSessionOptions();
+        autoBackup();
     }
 
     // --- HISTORIQUE ---
@@ -556,6 +525,7 @@
 
     function saveHistory() {
         localStorage.setItem('ultraHistory', JSON.stringify(history));
+        autoBackup();
     }
 
     function markSessionDone() {
@@ -571,58 +541,41 @@
         });
         saveHistory();
         const btn = document.getElementById('done-btn');
-        if (btn) { btn.innerText = "✔ Enregistré"; setTimeout(() => { btn.innerText = "✅ Terminer la séance"; }, 2000); }
+        if (btn) { btn.innerText = "Séance enregistrée"; setTimeout(() => { btn.innerText = "Terminer la séance"; }, 2000); }
     }
 
     // --- NAVIGATION DE BASE ---
     function switchScreen(screenId) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
+        document.querySelectorAll('.bb-item').forEach(b => b.classList.remove('active'));
+        const bb = document.getElementById('bb-' + screenId);
+        if (bb) bb.classList.add('active');
+        if(screenId === 'home-screen') renderHome();
         if(screenId === 'calendar-screen') initCalendar();
         if(screenId === 'history-screen') renderHistoryScreen();
-    }
-
-    function toggleSidebar() {
-        const s = document.getElementById('sidebar');
-        const o = document.getElementById('sidebar-overlay');
-        const open = s.classList.contains('open');
-        s.classList.toggle('open');
-        o.style.display = open ? 'none' : 'block';
+        window.scrollTo(0, 0);
     }
 
     function goHome() { switchScreen('home-screen'); }
 
-    // --- SÉANCES ET INTENSITÉ (curseur 1-10 mappé sur std/inter/expert) ---
-    let currentIntensity = 5;
-
-    function intensityToLevel(v) {
-        v = +v;
-        if (v <= 3) return 'std';
-        if (v <= 7) return 'inter';
-        return 'expert';
-    }
+    // --- SÉANCES ET NIVEAUX ---
     const LEVEL_NAMES = { std: "Standard", inter: "Intermédiaire", expert: "Expert" };
 
-    function setIntensity(v) {
-        currentIntensity = +v;
-        currentLevel = intensityToLevel(v);
-        document.getElementById('intensity-label').innerText = `${v}/10 · ${LEVEL_NAMES[currentLevel]}`;
-        renderExercises();
-    }
-
-    // Compat : appelée depuis le planning (niveau fixé std/inter/expert)
     function changeLevel(lv) {
-        const map = { std: 2, inter: 5, expert: 9 };
-        const slider = document.getElementById('intensity-slider');
-        if (slider) slider.value = map[lv];
-        setIntensity(map[lv]);
+        currentLevel = lv;
+        document.getElementById('btn-std').classList.toggle('active', lv === 'std');
+        document.getElementById('btn-inter').classList.toggle('active', lv === 'inter');
+        document.getElementById('btn-expert').classList.toggle('active', lv === 'expert');
+        renderExercises();
     }
 
     function openSession(id, forcedLevel = null) {
         currentId = id;
-        changeLevel(forcedLevel || 'inter');
+        changeLevel(forcedLevel || 'std');
 
         const s = getData(id);
+        if (!s) return;
         document.getElementById('stitle').innerText = s.t;
         document.getElementById('s-concept').innerText = s.concept;
         document.getElementById('s-resume').innerText = s.resume;
@@ -685,6 +638,11 @@
 
         for(let i=0; i<startOffset; i++) { grid.innerHTML += `<div class="cal-day empty"></div>`; }
 
+        const todayStr = new Date().toISOString().slice(0, 10);
+        // Regroupement de l'historique par date pour affichage
+        let doneByDate = {};
+        history.forEach(h => { (doneByDate[h.date] = doneByDate[h.date] || []).push(h); });
+
         for(let i=1; i<=daysInMonth; i++) {
             let dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             let plan = plannedData[dateStr];
@@ -693,8 +651,13 @@
             if(plan && getData(plan.id)) {
                 badgeHtml = `<div class="plan-badge badge-${plan.level}">${getData(plan.id).t}</div>`;
             }
-            
-            grid.innerHTML += `<div class="cal-day" onclick="openPlanModal('${dateStr}', ${i})"><span class="day-num">${i}</span>${badgeHtml}</div>`;
+
+            let doneHtml = (doneByDate[dateStr] || []).map(h =>
+                `<div class="done-badge">Fait · ${h.title}</div>`
+            ).join("");
+
+            let todayClass = dateStr === todayStr ? " today" : "";
+            grid.innerHTML += `<div class="cal-day${todayClass}" onclick="openPlanModal('${dateStr}', ${i})"><span class="day-num">${i}</span>${badgeHtml}${doneHtml}</div>`;
         }
     }
 
@@ -725,6 +688,7 @@
         else { plannedData[dateStr] = { id: id, level: level }; }
 
         localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
+        autoBackup();
         closePlanModal();
         renderCalendar();
     }
@@ -737,8 +701,17 @@
         return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
     }
 
+    let templateConfirmPending = false;
     function applyTemplate() {
-        if(!confirm("Appliquer le modèle alterné (Semaine A / Semaine B) sur le mois affiché ? Cela remplacera les séances de ces jours.")) return;
+        const btn = document.querySelector('#calendar-screen .header-box .nav-btn');
+        if (!templateConfirmPending) {
+            templateConfirmPending = true;
+            btn.innerText = "Confirmer ? (remplace le mois)";
+            setTimeout(() => { templateConfirmPending = false; btn.innerText = "Générer Modèle"; }, 4000);
+            return;
+        }
+        templateConfirmPending = false;
+        btn.innerText = "Générer Modèle";
         
         const year = calDate.getFullYear();
         const month = calDate.getMonth();
@@ -758,6 +731,7 @@
             if(dayOfWeek === 5) plannedData[dateStr] = { id: isWeekA ? 'V3A' : 'V3B', level: 'std' };
         }
         localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
+        autoBackup();
         renderCalendar();
     }
 
@@ -795,10 +769,6 @@
     function toggleCat(c) {
         if (selectedCats.has(c)) { selectedCats.delete(c); } else { selectedCats.add(c); }
         document.getElementById('chip-' + c).classList.toggle('active', selectedCats.has(c));
-    }
-
-    function updateBuilderIntensityLabel(v) {
-        document.getElementById('builder-intensity-label').innerText = `${v}/10 · ${LEVEL_NAMES[intensityToLevel(v)]}`;
     }
 
     function shuffle(arr) {
@@ -853,8 +823,8 @@
                     <b> ${e.n.replace(/^\d+\.\s*/, '')}</b>
                 </div>
                 <div class="ex-row-actions">
-                    <button class="icon-btn" onclick="swapExercise(${idx})" title="Changer">🔄</button>
-                    <button class="icon-btn remove" onclick="removeExercise(${idx})" title="Retirer">✕</button>
+                    <button class="mini-btn" onclick="swapExercise(${idx})">Changer</button>
+                    <button class="mini-btn" onclick="removeExercise(${idx})">Retirer</button>
                 </div>
             </div>
         `).join("");
@@ -873,52 +843,77 @@
         renderBuilderResult();
     }
 
-    function saveCustomSession() {
-        const nameInput = document.getElementById('builder-session-name');
-        const name = nameInput.value.trim();
-        if (!name || currentBuilderList.length === 0) return;
-
-        const intensity = +document.getElementById('builder-intensity-slider').value;
+    // Stocke la séance construite (interne, pour relance depuis l'historique ou le planning)
+    function storeBuiltSession() {
+        if (currentBuilderList.length === 0) return null;
         const comp = computeComposition(currentBuilderList);
-        const compText = CAT_LIST.filter(c => comp.pct[c] > 0).map(c => `${comp.pct[c]}% ${CAT_LABELS[c]}`).join(' · ');
-
+        const compText = CAT_LIST.filter(c => comp.pct[c] > 0).map(c => `${comp.pct[c]}% ${CAT_LABELS[c].split('/')[0]}`).join(' · ');
+        const d = new Date();
         const id = 'C' + Date.now();
         customSessions[id] = {
-            t: name,
-            concept: `Séance hybride générée : ${compText}.`,
-            resume: `Composition : ${compText}. Intensité de base : ${intensity}/10.`,
+            t: `Séance perso ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`,
+            concept: `Séance hybride construite sur mesure.`,
+            resume: `Composition : ${compText}.`,
             custom: true,
             ex: currentBuilderList.map(e => ({ ...e }))
         };
         saveCustomSessions();
-
-        nameInput.value = "";
-        currentBuilderList = [];
-        document.getElementById('builder-result-card').style.display = 'none';
-        renderCustomHome();
         refreshModalSessionOptions();
-        switchScreen('home-screen');
-        goHome();
+        return id;
     }
 
-    function renderCustomHome() {
-        const card = document.getElementById('custom-home-card');
-        const list = document.getElementById('custom-home-list');
-        const ids = Object.keys(customSessions);
-        if (ids.length === 0) { card.style.display = 'none'; return; }
-        card.style.display = 'block';
-        list.innerHTML = ids.map(id => {
-            const s = customSessions[id];
-            const comp = computeComposition(s.ex);
-            const compText = CAT_LIST.filter(c => comp.pct[c] > 0).map(c => `${comp.pct[c]}% ${CAT_LABELS[c].split('/')[0]}`).join(' · ');
-            return `
-                <button class="btn-session" onclick="openSession('${id}')" style="position:relative;">
+    function launchBuiltSession() {
+        const id = storeBuiltSession();
+        if (!id) return;
+        currentBuilderList = [];
+        document.getElementById('builder-result-card').style.display = 'none';
+        openSession(id);
+    }
+
+    function planBuiltSession() {
+        const dateStr = document.getElementById('builder-plan-date').value;
+        if (!dateStr) return;
+        const id = storeBuiltSession();
+        if (!id) return;
+        plannedData[dateStr] = { id: id, level: 'std' };
+        localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
+        autoBackup();
+        currentBuilderList = [];
+        document.getElementById('builder-result-card').style.display = 'none';
+        calDate = new Date(dateStr + 'T12:00:00');
+        switchScreen('calendar-screen');
+    }
+
+    // --- ACCUEIL : séance du jour ---
+    function renderHome() {
+        const d = new Date();
+        document.getElementById('home-date').innerText = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+        const todayStr = d.toISOString().slice(0, 10);
+        const plan = plannedData[todayStr];
+        const box = document.getElementById('home-today');
+        const doneToday = history.filter(h => h.date === todayStr);
+
+        let html = "";
+        if (plan && getData(plan.id)) {
+            const s = getData(plan.id);
+            html += `
+                <div class="day-header" style="grid-column:auto;">Séance du jour</div>
+                <button class="btn-session" style="width:100%; margin-top:15px;" onclick="openSession('${plan.id}', '${plan.level}')">
                     <span class="s-title">${s.t}</span>
-                    <span class="s-subtitle">${compText}</span>
-                    <span onclick="event.stopPropagation(); deleteCustomSession('${id}')" style="position:absolute; top:8px; right:10px; font-weight:900; color:#b30000;">✕</span>
-                </button>
-            `;
-        }).join("");
+                    <span class="s-subtitle">${LEVEL_NAMES[plan.level] || plan.level} — ${s.resume}</span>
+                </button>`;
+        } else {
+            html += `
+                <div class="day-header" style="grid-column:auto;">Séance du jour</div>
+                <div class="empty-hint">Rien de planifié aujourd'hui.</div>
+                <button class="nav-btn btn-full" onclick="switchScreen('builder-screen')">Construire une séance</button>`;
+        }
+        if (doneToday.length > 0) {
+            html += `<div class="day-header" style="grid-column:auto; margin-top:20px;">Déjà fait aujourd'hui</div>` +
+                doneToday.map(h => `<div class="hist-row" style="padding:10px 0;"><span class="hist-title" style="padding:0;">${h.title}</span><span class="plan-badge badge-${h.level}">${LEVEL_NAMES[h.level] || h.level}</span></div>`).join("");
+        }
+        box.innerHTML = html;
     }
 
     function refreshModalSessionOptions() {
@@ -936,11 +931,12 @@
         if (history.length === 0) {
             listEl.innerHTML = `<div class="empty-hint">Aucune séance terminée pour l'instant.</div>`;
         } else {
-            listEl.innerHTML = history.map(h => `
+            listEl.innerHTML = history.map((h, idx) => `
                 <div class="hist-row">
                     <span class="hist-date">${h.date}</span>
                     <span class="hist-title">${h.title}</span>
                     <span class="plan-badge badge-${h.level}" style="flex-shrink:0;">${LEVEL_NAMES[h.level] || h.level}</span>
+                    ${getData(h.id) ? `<button class="mini-btn" onclick="openSession('${h.id}', '${h.level}')">Relancer</button>` : ""}
                 </div>
             `).join("");
         }
@@ -979,24 +975,116 @@
             try {
                 const payload = JSON.parse(e.target.result);
                 if (payload.plannedData) { plannedData = payload.plannedData; localStorage.setItem('ultraPlan', JSON.stringify(plannedData)); }
-                if (payload.customSessions) { customSessions = payload.customSessions; saveCustomSessions(); }
-                if (payload.history) { history = payload.history; saveHistory(); }
-                renderCustomHome();
+                if (payload.customSessions) { customSessions = payload.customSessions; localStorage.setItem('ultraCustomSessions', JSON.stringify(customSessions)); }
+                if (payload.history) { history = payload.history; localStorage.setItem('ultraHistory', JSON.stringify(history)); }
                 refreshModalSessionOptions();
-                document.getElementById('import-status').style.color = '#1a7a3c';
-                document.getElementById('import-status').innerText = "✔ Import réussi.";
+                document.getElementById('import-status').style.color = '#000';
+                document.getElementById('import-status').innerText = "Import réussi.";
             } catch (err) {
-                document.getElementById('import-status').style.color = '#b30000';
-                document.getElementById('import-status').innerText = "✕ Fichier invalide.";
+                document.getElementById('import-status').style.color = '#000';
+                document.getElementById('import-status').innerText = "Fichier invalide.";
             }
         };
         reader.readAsText(file);
     }
 
+    // --- SAUVEGARDE AUTOMATIQUE (fichier lié via File System Access API) ---
+    let backupHandle = null;
+    const FSA_SUPPORTED = 'showSaveFilePicker' in window;
+
+    function backupPayload() {
+        return JSON.stringify({ exportedAt: new Date().toISOString(), plannedData, customSessions, history }, null, 2);
+    }
+
+    async function linkBackupFile() {
+        const status = document.getElementById('backup-status');
+        if (!FSA_SUPPORTED) {
+            status.innerText = "Non supporté par ce navigateur (utilise l'export manuel).";
+            return;
+        }
+        try {
+            backupHandle = await window.showSaveFilePicker({
+                suggestedName: 'renfo-ultra-trail-backup.json',
+                types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+            });
+            await idbSet('backupHandle', backupHandle);
+            await writeBackup();
+            status.innerText = "Fichier lié. Sauvegarde automatique active.";
+        } catch (err) { /* sélection annulée */ }
+    }
+
+    async function writeBackup() {
+        if (!backupHandle) return;
+        try {
+            const writable = await backupHandle.createWritable();
+            await writable.write(backupPayload());
+            await writable.close();
+        } catch (err) { console.log('Backup auto impossible :', err); }
+    }
+
+    let backupTimer = null;
+    function autoBackup() {
+        if (!backupHandle) return;
+        clearTimeout(backupTimer);
+        backupTimer = setTimeout(writeBackup, 1500);
+    }
+
+    // Mini-wrapper IndexedDB pour persister le handle du fichier entre sessions
+    function idbOpen() {
+        return new Promise((res, rej) => {
+            const req = indexedDB.open('renfo-ut', 1);
+            req.onupgradeneeded = () => req.result.createObjectStore('kv');
+            req.onsuccess = () => res(req.result);
+            req.onerror = () => rej(req.error);
+        });
+    }
+    async function idbSet(key, val) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+            const tx = db.transaction('kv', 'readwrite');
+            tx.objectStore('kv').put(val, key);
+            tx.oncomplete = () => res();
+            tx.onerror = () => rej(tx.error);
+        });
+    }
+    async function idbGet(key) {
+        const db = await idbOpen();
+        return new Promise((res, rej) => {
+            const tx = db.transaction('kv', 'readonly');
+            const rq = tx.objectStore('kv').get(key);
+            rq.onsuccess = () => res(rq.result);
+            rq.onerror = () => rej(rq.error);
+        });
+    }
+
+    async function restoreBackupHandle() {
+        if (!FSA_SUPPORTED) return;
+        try {
+            const h = await idbGet('backupHandle');
+            if (!h) return;
+            const perm = await h.queryPermission({ mode: 'readwrite' });
+            if (perm === 'granted') {
+                backupHandle = h;
+                document.getElementById('backup-status').innerText = "Fichier lié. Sauvegarde automatique active.";
+            } else {
+                document.getElementById('backup-status').innerText = "Fichier lié détecté — clique pour réactiver.";
+                document.getElementById('link-backup-btn').onclick = async () => {
+                    const p = await h.requestPermission({ mode: 'readwrite' });
+                    if (p === 'granted') {
+                        backupHandle = h;
+                        document.getElementById('backup-status').innerText = "Fichier lié. Sauvegarde automatique active.";
+                        document.getElementById('link-backup-btn').onclick = linkBackupFile;
+                    }
+                };
+            }
+        } catch (err) { /* pas de handle stocké */ }
+    }
+
     // --- INIT ---
     initCatChips();
-    renderCustomHome();
     refreshModalSessionOptions();
+    renderHome();
+    restoreBackupHandle();
 
     setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR'); }, 1000);
 
