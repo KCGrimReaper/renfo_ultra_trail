@@ -190,7 +190,8 @@
         .done-badge { background: #fff; color: var(--wood); border: 1px solid var(--wood); font-size: 0.6rem; font-weight: bold; padding: 3px 4px; border-radius: 4px; text-transform: uppercase; text-align: center; word-break: break-word; line-height: 1.2; margin-top: 3px; }
 
         /* --- PLAYER DE SÉANCE --- */
-        #player { position: fixed; inset: 0; background: linear-gradient(160deg, var(--ink) 0%, #4a3a28 100%); z-index: 4000; display: none; flex-direction: column; color: #fff; padding: 20px; }
+        #player { position: fixed; inset: 0; background: linear-gradient(rgba(43,38,32,0.78), rgba(43,38,32,0.82)), url('https://i.postimg.cc/HWZDhHbq/Gemini-Generated-Image-dype98dype98dype-(1)-(1).png') no-repeat center center fixed; background-size: cover; z-index: 4000; display: none; flex-direction: column; color: #fff; padding: 20px; }
+        #player.no-photo { background: linear-gradient(160deg, var(--ink) 0%, #4a3a28 100%); }
         #player.open { display: flex; }
         .player-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
         .player-progress { flex-grow: 1; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; }
@@ -818,7 +819,12 @@
         let dateStr = document.getElementById('modal-date-val').value;
         let id = document.getElementById('modal-session').value;
 
-        if(id === "") { delete plannedData[dateStr]; } 
+        // Si c'est un modèle, on planifie un snapshot (séance figée)
+        if (id && customTemplates[id]) {
+            id = storeSessionFromEx(getTemplateEx(id), getTemplateName(id));
+        }
+
+        if(id === "" || !id) { delete plannedData[dateStr]; } 
         else { plannedData[dateStr] = { id: id }; }
 
         localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
@@ -1162,25 +1168,32 @@
     let editingTemplateId = null;
     let planTplOpenId = null;
 
+    // Migration unique : les 6 séances d'origine deviennent des modèles comme les autres
+    (function migrateBuiltinTemplates() {
+        if (localStorage.getItem('ultraTplMigrated')) return;
+        Object.keys(data).forEach(id => {
+            if (deletedTemplateIds.includes(id)) return;
+            customTemplates['T_' + id] = {
+                name: data[id].t,
+                ex: data[id].ex.map(e => { const c = { ...e }; delete c.inter; delete c.expert; return c; })
+            };
+        });
+        localStorage.setItem('ultraTplMigrated', '1');
+        localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates));
+    })();
+
     function saveTemplates() {
         localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates));
         autoBackup();
     }
 
-    function saveDeletedTemplates() {
-        localStorage.setItem('ultraDeletedTemplates', JSON.stringify(deletedTemplateIds));
-        autoBackup();
-    }
-
     function getTemplateEx(id) {
         if (customTemplates[id]) return customTemplates[id].ex;
-        if (data[id]) return data[id].ex.map(e => { const c = { ...e }; delete c.inter; delete c.expert; return c; });
         return null;
     }
 
     function getTemplateName(id) {
         if (customTemplates[id]) return customTemplates[id].name;
-        if (data[id]) return data[id].t;
         return "";
     }
 
@@ -1198,6 +1211,7 @@
         }
         editingTemplateId = null;
         saveTemplates();
+        refreshModalSessionOptions();
         nameEl.value = "";
         renderTemplates();
     }
@@ -1213,8 +1227,7 @@
 
     function editTemplate(id) {
         loadTemplate(id);
-        // Modèle perso : le prochain enregistrement écrase ; modèle intégré : crée une copie
-        editingTemplateId = customTemplates[id] ? id : null;
+        editingTemplateId = id;
         document.getElementById('template-name').value = getTemplateName(id);
     }
 
@@ -1233,15 +1246,9 @@
             return;
         }
         tplDeletePending = null;
-        if (customTemplates[id]) {
-            delete customTemplates[id];
-            if (editingTemplateId === id) editingTemplateId = null;
-            saveTemplates();
-        } else if (data[id]) {
-            // Modèle intégré : masqué via liste de suppression
-            deletedTemplateIds.push(id);
-            saveDeletedTemplates();
-        }
+        delete customTemplates[id];
+        if (editingTemplateId === id) editingTemplateId = null;
+        saveTemplates();
         refreshModalSessionOptions();
         renderTemplates();
     }
@@ -1256,15 +1263,9 @@
         const dateStr = dateEl ? dateEl.value : "";
         if (!dateStr) return;
 
-        let sessionId;
-        if (data[id] && !customTemplates[id]) {
-            // Modèle intégré : on planifie directement la séance d'origine
-            sessionId = id;
-        } else {
-            // Modèle perso : snapshot en séance (les modifs ultérieures du modèle n'affectent pas le planning)
-            sessionId = storeSessionFromEx(getTemplateEx(id), getTemplateName(id));
-            if (!sessionId) return;
-        }
+        // Snapshot en séance : modifier le modèle ensuite n'affecte pas le planning
+        const sessionId = storeSessionFromEx(getTemplateEx(id), getTemplateName(id));
+        if (!sessionId) return;
         plannedData[dateStr] = { id: sessionId };
         localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
         autoBackup();
@@ -1273,13 +1274,13 @@
         switchScreen('calendar-screen');
     }
 
-    function templateRowHtml(id, name, count, origin) {
+    function templateRowHtml(id, name, count) {
         const planOpen = planTplOpenId === id;
         return `
             <div class="ex-row">
                 <div class="ex-row-info">
                     <b>${name}</b>
-                    <div class="ex-row-sub">${count} exercices — ${origin}</div>
+                    <div class="ex-row-sub">${count} exercices</div>
                 </div>
                 <div class="ex-row-actions">
                     <button class="mini-btn" onclick="loadTemplate('${id}')">Charger</button>
@@ -1299,13 +1300,9 @@
     function renderTemplates() {
         const listEl = document.getElementById('template-list');
         if (!listEl) return;
-
-        const builtins = Object.keys(data).filter(id => !deletedTemplateIds.includes(id))
-            .map(id => templateRowHtml(id, data[id].t, data[id].ex.length, "modèle d'origine"));
-        const customs = Object.keys(customTemplates)
-            .map(id => templateRowHtml(id, customTemplates[id].name, customTemplates[id].ex.length, "créé par toi"));
-
-        const html = builtins.concat(customs).join("");
+        const html = Object.keys(customTemplates)
+            .map(id => templateRowHtml(id, customTemplates[id].name, customTemplates[id].ex.length))
+            .join("");
         listEl.innerHTML = html || `<div class="empty-hint">Aucun modèle. Construis une séance et enregistre-la comme modèle.</div>`;
     }
 
@@ -1416,13 +1413,13 @@
         if (!sel) return;
         const current = sel.value;
 
-        const builtins = Object.keys(data).filter(id => !deletedTemplateIds.includes(id))
-            .map(id => `<option value="${id}">${data[id].t}</option>`).join("");
+        const templates = Object.keys(customTemplates)
+            .map(id => `<option value="${id}">${customTemplates[id].name}</option>`).join("");
         const customs = Object.keys(customSessions)
             .map(id => `<option value="${id}">${customSessions[id].t}</option>`).join("");
 
         sel.innerHTML = `<option value="">-- Repos / Aucune --</option>`
-            + (builtins ? `<optgroup label="Modèles">${builtins}</optgroup>` : "")
+            + (templates ? `<optgroup label="Modèles">${templates}</optgroup>` : "")
             + (customs ? `<optgroup label="Mes séances">${customs}</optgroup>` : "");
         sel.value = current;
     }
@@ -1615,7 +1612,9 @@
         const s = getData(currentId);
         if (!s || !s.ex.length) return;
         playerIndex = 0;
-        document.getElementById('player').classList.add('open');
+        const p = document.getElementById('player');
+        p.classList.toggle('no-photo', !trainingBgEnabled);
+        p.classList.add('open');
         renderPlayer();
     }
 

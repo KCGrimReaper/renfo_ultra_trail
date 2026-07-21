@@ -1,4 +1,4 @@
-const CACHE_NAME = 'renfo-ultra-trail-v1';
+const CACHE_NAME = 'renfo-ultra-trail-v2';
 const APP_SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -19,6 +19,20 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Pages HTML : réseau d'abord (toujours la dernière version), cache en secours hors-ligne
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return response;
+      }).catch(() => caches.match(event.request).then((c) => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Autres ressources : cache d'abord
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
