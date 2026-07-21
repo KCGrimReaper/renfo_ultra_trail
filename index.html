@@ -425,22 +425,7 @@
     
     <div class="modal-field">
         <label>Séance</label>
-        <select id="modal-session" class="modal-select">
-            <option value="">-- Repos / Aucune --</option>
-            <optgroup label="Puissance / Gainage">
-                <option value="L1A">La forge verticale</option>
-                <option value="L1B">Le châssis tout-terrain</option>
-            </optgroup>
-            <optgroup label="Pliométrie">
-                <option value="J2A">L'amortisseur d'impacts</option>
-                <option value="J2B">Le danseur des crêtes</option>
-            </optgroup>
-            <optgroup label="Prévention">
-                <option value="V3A">Le bouclier tendineux</option>
-                <option value="V3B">Le pilote automatique</option>
-            </optgroup>
-            <optgroup label="Mes séances" id="modal-custom-optgroup"></optgroup>
-        </select>
+        <select id="modal-session" class="modal-select"></select>
     </div>
 
     <div class="modal-actions">
@@ -1122,36 +1107,65 @@
 
     // --- MODÈLES DE SÉANCES ---
     let customTemplates = JSON.parse(localStorage.getItem('ultraTemplates')) || {};
+    let deletedTemplateIds = JSON.parse(localStorage.getItem('ultraDeletedTemplates')) || [];
     let tplDeletePending = null;
+    let editingTemplateId = null;
+    let planTplOpenId = null;
 
     function saveTemplates() {
         localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates));
         autoBackup();
     }
 
+    function saveDeletedTemplates() {
+        localStorage.setItem('ultraDeletedTemplates', JSON.stringify(deletedTemplateIds));
+        autoBackup();
+    }
+
+    function getTemplateEx(id) {
+        if (customTemplates[id]) return customTemplates[id].ex;
+        if (data[id]) return data[id].ex.map(e => { const c = { ...e }; delete c.inter; delete c.expert; return c; });
+        return null;
+    }
+
+    function getTemplateName(id) {
+        if (customTemplates[id]) return customTemplates[id].name;
+        if (data[id]) return data[id].t;
+        return "";
+    }
+
     function saveTemplate() {
         const nameEl = document.getElementById('template-name');
         const name = nameEl.value.trim();
         if (!name || currentBuilderList.length === 0) return;
-        const id = 'T' + Date.now();
-        customTemplates[id] = { name: name, ex: currentBuilderList.map(e => ({ ...e })) };
+
+        if (editingTemplateId && customTemplates[editingTemplateId]) {
+            // Modification d'un modèle existant : écrasement
+            customTemplates[editingTemplateId] = { name: name, ex: currentBuilderList.map(e => ({ ...e })) };
+        } else {
+            const id = 'T' + Date.now();
+            customTemplates[id] = { name: name, ex: currentBuilderList.map(e => ({ ...e })) };
+        }
+        editingTemplateId = null;
         saveTemplates();
         nameEl.value = "";
         renderTemplates();
     }
 
     function loadTemplate(id) {
-        let ex;
-        if (customTemplates[id]) {
-            ex = customTemplates[id].ex;
-        } else if (data[id]) {
-            // Modèle intégré : on retire les variantes de niveau
-            ex = data[id].ex.map(e => { const c = { ...e }; delete c.inter; delete c.expert; return c; });
-        } else { return; }
+        const ex = getTemplateEx(id);
+        if (!ex) return;
         currentBuilderList = ex.map(e => ({ ...e }));
         renderBuilderSession();
         renderExerciseCatalog();
         window.scrollTo(0, 0);
+    }
+
+    function editTemplate(id) {
+        loadTemplate(id);
+        // Modèle perso : le prochain enregistrement écrase ; modèle intégré : crée une copie
+        editingTemplateId = customTemplates[id] ? id : null;
+        document.getElementById('template-name').value = getTemplateName(id);
     }
 
     function deleteTemplate(id) {
@@ -1169,63 +1183,103 @@
             return;
         }
         tplDeletePending = null;
-        delete customTemplates[id];
-        saveTemplates();
+        if (customTemplates[id]) {
+            delete customTemplates[id];
+            if (editingTemplateId === id) editingTemplateId = null;
+            saveTemplates();
+        } else if (data[id]) {
+            // Modèle intégré : masqué via liste de suppression
+            deletedTemplateIds.push(id);
+            saveDeletedTemplates();
+        }
+        refreshModalSessionOptions();
         renderTemplates();
+    }
+
+    function openPlanTpl(id) {
+        planTplOpenId = (planTplOpenId === id) ? null : id;
+        renderTemplates();
+    }
+
+    function planTemplate(id) {
+        const dateEl = document.getElementById('tpl-date-' + id);
+        const dateStr = dateEl ? dateEl.value : "";
+        if (!dateStr) return;
+
+        let sessionId;
+        if (data[id] && !customTemplates[id]) {
+            // Modèle intégré : on planifie directement la séance d'origine
+            sessionId = id;
+        } else {
+            // Modèle perso : snapshot en séance (les modifs ultérieures du modèle n'affectent pas le planning)
+            sessionId = storeSessionFromEx(getTemplateEx(id), getTemplateName(id));
+            if (!sessionId) return;
+        }
+        plannedData[dateStr] = { id: sessionId };
+        localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
+        autoBackup();
+        planTplOpenId = null;
+        calDate = new Date(dateStr + 'T12:00:00');
+        switchScreen('calendar-screen');
+    }
+
+    function templateRowHtml(id, name, count, origin) {
+        const planOpen = planTplOpenId === id;
+        return `
+            <div class="ex-row">
+                <div class="ex-row-info">
+                    <b>${name}</b>
+                    <div class="ex-row-sub">${count} exercices — ${origin}</div>
+                </div>
+                <div class="ex-row-actions">
+                    <button class="mini-btn" onclick="loadTemplate('${id}')">Charger</button>
+                    <button class="mini-btn" onclick="editTemplate('${id}')">Modifier</button>
+                    <button class="mini-btn" onclick="openPlanTpl('${id}')">Planifier</button>
+                    <button class="mini-btn" id="del-tpl-${id}" onclick="deleteTemplate('${id}')">Supprimer</button>
+                </div>
+                <div class="add-panel${planOpen ? " open" : ""}">
+                    <div style="display:flex; gap:10px;">
+                        <input type="date" id="tpl-date-${id}" class="text-input" style="flex-grow:1;">
+                        <button class="nav-btn" onclick="planTemplate('${id}')">Planifier</button>
+                    </div>
+                </div>
+            </div>`;
     }
 
     function renderTemplates() {
         const listEl = document.getElementById('template-list');
         if (!listEl) return;
-        let html = "";
 
-        // Modèles intégrés (les 6 séances d'origine)
-        html += Object.keys(data).map(id => `
-            <div class="ex-row">
-                <div class="ex-row-info">
-                    <b>${data[id].t}</b>
-                    <div class="ex-row-sub">${data[id].ex.length} exercices — modèle intégré</div>
-                </div>
-                <div class="ex-row-actions">
-                    <button class="mini-btn" onclick="loadTemplate('${id}')">Charger</button>
-                </div>
-            </div>
-        `).join("");
+        const builtins = Object.keys(data).filter(id => !deletedTemplateIds.includes(id))
+            .map(id => templateRowHtml(id, data[id].t, data[id].ex.length, "modèle intégré"));
+        const customs = Object.keys(customTemplates)
+            .map(id => templateRowHtml(id, customTemplates[id].name, customTemplates[id].ex.length, "modèle personnalisé"));
 
-        // Modèles personnalisés
-        html += Object.keys(customTemplates).map(id => `
-            <div class="ex-row">
-                <div class="ex-row-info">
-                    <b>${customTemplates[id].name}</b>
-                    <div class="ex-row-sub">${customTemplates[id].ex.length} exercices — modèle personnalisé</div>
-                </div>
-                <div class="ex-row-actions">
-                    <button class="mini-btn" onclick="loadTemplate('${id}')">Charger</button>
-                    <button class="mini-btn" id="del-tpl-${id}" onclick="deleteTemplate('${id}')">Supprimer</button>
-                </div>
-            </div>
-        `).join("");
-
-        listEl.innerHTML = html;
+        const html = builtins.concat(customs).join("");
+        listEl.innerHTML = html || `<div class="empty-hint">Aucun modèle. Construis une séance et enregistre-la comme modèle.</div>`;
     }
 
-    // Stocke la séance construite (interne, pour relance depuis l'historique ou le planning)
-    function storeBuiltSession() {
-        if (currentBuilderList.length === 0) return null;
-        const comp = computeComposition(currentBuilderList);
+    // Stocke une séance à partir d'une liste d'exercices (relance depuis historique/planning)
+    function storeSessionFromEx(exList, title = null) {
+        if (!exList || exList.length === 0) return null;
+        const comp = computeComposition(exList);
         const compText = CAT_LIST.filter(c => comp.pct[c] > 0).map(c => `${comp.pct[c]}% ${CAT_LABELS[c].split('/')[0]}`).join(' · ');
         const d = new Date();
         const id = 'C' + Date.now();
         customSessions[id] = {
-            t: `Séance perso ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`,
+            t: title || `Séance perso ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`,
             concept: `Séance hybride construite sur mesure.`,
             resume: `Composition : ${compText}.`,
             custom: true,
-            ex: currentBuilderList.map(e => ({ ...e }))
+            ex: exList.map(e => ({ ...e }))
         };
         saveCustomSessions();
         refreshModalSessionOptions();
         return id;
+    }
+
+    function storeBuiltSession() {
+        return storeSessionFromEx(currentBuilderList);
     }
 
     function launchBuiltSession() {
@@ -1286,9 +1340,7 @@
                     <span class="s-subtitle">${s.resume}</span>
                 </button>`;
         } else {
-            html += `
-                <div class="empty-hint">Rien de planifié aujourd'hui.</div>
-                <button class="nav-btn btn-full" onclick="switchScreen('builder-screen')">Construire une séance</button>`;
+            html += `<div class="empty-hint">Rien de planifié aujourd'hui.</div>`;
         }
         if (doneToday.length > 0) {
             html += doneToday.map(h => `<div class="hist-row" style="padding:12px 0 0; border:none;"><span class="hist-title" style="padding:0;">${h.title}</span><span class="done-badge" style="margin-top:0;">Fait</span></div>`).join("");
@@ -1310,12 +1362,19 @@
     }
 
     function refreshModalSessionOptions() {
-        const og = document.getElementById('modal-custom-optgroup');
-        if (!og) return;
-        const ids = Object.keys(customSessions);
-        og.innerHTML = ids.length === 0
-            ? `<option value="" disabled>Aucune pour l'instant</option>`
-            : ids.map(id => `<option value="${id}">${customSessions[id].t}</option>`).join("");
+        const sel = document.getElementById('modal-session');
+        if (!sel) return;
+        const current = sel.value;
+
+        const builtins = Object.keys(data).filter(id => !deletedTemplateIds.includes(id))
+            .map(id => `<option value="${id}">${data[id].t}</option>`).join("");
+        const customs = Object.keys(customSessions)
+            .map(id => `<option value="${id}">${customSessions[id].t}</option>`).join("");
+
+        sel.innerHTML = `<option value="">-- Repos / Aucune --</option>`
+            + (builtins ? `<optgroup label="Modèles">${builtins}</optgroup>` : "")
+            + (customs ? `<optgroup label="Mes séances">${customs}</optgroup>` : "");
+        sel.value = current;
     }
 
     // --- HISTORIQUE ---
@@ -1368,7 +1427,7 @@
     function exportAllData() {
         const payload = {
             exportedAt: new Date().toISOString(),
-            plannedData, customSessions, customExercises, customTemplates, deletedExerciseIds, history
+            plannedData, customSessions, customExercises, customTemplates, deletedExerciseIds, deletedTemplateIds, history
         };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1393,6 +1452,7 @@
                 if (payload.customExercises) { customExercises = payload.customExercises; localStorage.setItem('ultraCustomExercises', JSON.stringify(customExercises)); }
                 if (payload.customTemplates) { customTemplates = payload.customTemplates; localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates)); }
                 if (payload.deletedExerciseIds) { deletedExerciseIds = payload.deletedExerciseIds; localStorage.setItem('ultraDeletedExercises', JSON.stringify(deletedExerciseIds)); }
+                if (payload.deletedTemplateIds) { deletedTemplateIds = payload.deletedTemplateIds; localStorage.setItem('ultraDeletedTemplates', JSON.stringify(deletedTemplateIds)); }
                 if (payload.history) { history = payload.history; localStorage.setItem('ultraHistory', JSON.stringify(history)); }
                 refreshModalSessionOptions();
                 document.getElementById('import-status').style.color = '#000';
@@ -1410,7 +1470,7 @@
     const FSA_SUPPORTED = 'showSaveFilePicker' in window;
 
     function backupPayload() {
-        return JSON.stringify({ exportedAt: new Date().toISOString(), plannedData, customSessions, customExercises, customTemplates, deletedExerciseIds, history }, null, 2);
+        return JSON.stringify({ exportedAt: new Date().toISOString(), plannedData, customSessions, customExercises, customTemplates, deletedExerciseIds, deletedTemplateIds, history }, null, 2);
     }
 
     async function linkBackupFile() {
