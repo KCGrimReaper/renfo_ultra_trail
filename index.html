@@ -169,6 +169,41 @@
 
         /* --- REGLAGES --- */
         .settings-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:15px; }
+
+        /* --- ACTIONS SÉANCE (boutons compacts icône + texte) --- */
+        .session-actions { display: flex; gap: 12px; margin-top: 16px; }
+        .action-btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-weight: 800; text-transform: uppercase; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
+        .action-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+        .action-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .action-btn.primary svg { fill: #fff; stroke: none; }
+        .action-btn.primary:hover { background: var(--wood); }
+        .action-btn:hover { background: var(--bg); }
+
+        /* --- BOTTOM SHEET --- */
+        #sheet-overlay { position: fixed; inset: 0; background: rgba(43,38,32,0.45); z-index: 3400; display: none; }
+        #sheet-overlay.open { display: block; }
+        .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 1100px; margin: 0 auto; background: var(--card); border-radius: 20px 20px 0 0; z-index: 3500; transform: translateY(100%); transition: transform 0.3s ease; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(43,38,32,0.25); }
+        .sheet.open { transform: translateY(0); }
+        .sheet-handle { width: 40px; height: 4px; background: var(--line); border-radius: 2px; margin: 10px auto 4px; flex-shrink: 0; }
+        .sheet-head { padding: 6px 20px 14px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+        .sheet-head-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .sheet-head-top h3 { margin: 0; text-transform: uppercase; font-weight: 900; font-size: 1.05rem; }
+        .sheet-close { background: var(--bg); border: none; border-radius: 8px; width: 34px; height: 34px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .sheet-close svg { width: 18px; height: 18px; stroke: var(--ink); stroke-width: 2.2; fill: none; stroke-linecap: round; }
+        .sheet-body { overflow-y: auto; padding: 4px 0 20px; }
+        .sheet-count { font-weight: 700; font-size: 0.75rem; color: var(--muted); padding: 10px 20px 4px; }
+
+        /* --- FAB (bouton Ajouter) --- */
+        .fab-add { display: inline-flex; align-items: center; gap: 8px; width: 100%; justify-content: center; padding: 14px; border-radius: 12px; border: 2px dashed var(--line); background: var(--bg); color: var(--wood); font-weight: 800; text-transform: uppercase; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .fab-add:hover { border-color: var(--wood); background: #fff; }
+        .fab-add svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2.4; fill: none; stroke-linecap: round; }
+
+        /* --- MODALE EXERCICE --- */
+        #ex-modal-overlay { position: fixed; inset: 0; background: rgba(43,38,32,0.45); z-index: 3600; display: none; }
+        #ex-modal-overlay.open { display: block; }
+        #ex-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card); padding: 25px; border-radius: 14px; box-shadow: 0 10px 40px rgba(43,38,32,0.3); z-index: 3700; width: 90%; max-width: 460px; display: none; max-height: 90vh; overflow-y: auto; }
+        #ex-modal.open { display: block; }
+        #ex-modal h3 { margin-top: 0; text-transform: uppercase; font-weight: 900; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
         .ambiance-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin:10px 0 5px; }
         .ambiance-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio: 4/3; border:2px solid transparent; background: var(--bg); }
         .ambiance-item img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -335,11 +370,29 @@
             </table>
         </div>
 
-        <button class="nav-btn btn-full" style="margin-top:15px; background: var(--wood);" onclick="openPlayer()">Démarrer la séance guidée</button>
-        <button class="nav-btn btn-full" id="done-btn" style="margin-top:10px;" onclick="markSessionDone()">Terminer la séance</button>
+        <div class="session-actions">
+            <button class="action-btn primary" onclick="openPlayer()">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <span>Démarrer</span>
+            </button>
+            <button class="action-btn" onclick="markSessionDone()" id="done-btn">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5"/></svg>
+                <span>Terminer</span>
+            </button>
+        </div>
     </div>
 
     <div id="builder-screen" class="screen">
+        <div class="card">
+            <div class="header-box" style="margin-bottom:12px;">
+                <h1 class="screen-title">Construire</h1>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="toggle-btn" onclick="openTemplateSheet()">Charger un modèle</button>
+                <button class="toggle-btn" onclick="clearBuilder()" id="clear-builder-btn" style="display:none;">Vider la séance</button>
+            </div>
+        </div>
+
         <div class="card" id="builder-session-card" style="display:none;">
             <div class="day-header" style="grid-column:auto; margin-top:0; display:flex; justify-content:space-between; align-items:baseline;">
                 <span>Ma séance (<span id="builder-count">0</span> exercices)</span>
@@ -348,7 +401,19 @@
             <div class="comp-bar" id="builder-comp-bar"></div>
             <div class="comp-legend" id="builder-comp-legend"></div>
             <div id="builder-session-list"></div>
-            <div class="modal-actions">
+        </div>
+
+        <div id="builder-empty" class="card">
+            <div class="empty-hint" style="padding:30px 20px;">Ta séance est vide. Ajoute des exercices ou charge un modèle.</div>
+        </div>
+
+        <button class="fab-add" onclick="openExerciseSheet()">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Ajouter des exercices
+        </button>
+
+        <div class="card" id="builder-actions-card" style="display:none; margin-top:20px;">
+            <div class="modal-actions" style="margin-top:0;">
                 <button class="nav-btn btn-full" onclick="launchBuiltSession()">Lancer maintenant</button>
             </div>
             <div class="modal-field" style="margin-top:15px;">
@@ -366,56 +431,20 @@
                 </div>
             </div>
         </div>
-
-        <div class="card">
-            <div class="day-header" style="grid-column:auto; margin-top:0;">Partir d'un modèle</div>
-            <div id="template-list" style="margin-top:10px;"></div>
-        </div>
-
-        <div class="card">
-            <div class="header-box" style="margin-bottom:8px;">
-                <h1 class="screen-title">Ajouter des exercices</h1>
-            </div>
-            <div class="search-row">
-                <input type="text" id="ex-search" class="text-input" placeholder="Rechercher un exercice..." oninput="renderExerciseCatalog()">
-            </div>
-            <div class="chip-row" id="cat-chips"></div>
-            <div style="font-weight:700; font-size:0.75rem; color:var(--muted); margin-bottom:8px;" id="ex-catalog-count"></div>
-            <div class="table-card card" style="margin-bottom:0;">
-                <div id="ex-catalog"></div>
-            </div>
-        </div>
     </div>
 
     <div id="exercises-screen" class="screen">
         <div class="card">
             <div class="header-box" style="margin-bottom:15px;">
                 <h1 class="screen-title">Bibliothèque</h1>
-                <button class="toggle-btn" onclick="toggleNewExForm()">Nouvel exercice</button>
-            </div>
-
-            <div class="card" id="new-ex-form" style="display:none; background: var(--bg);">
-                <div class="day-header" style="grid-column:auto; margin-top:0;">Créer un exercice</div>
-                <div class="add-panel-grid" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
-                    <div><label>Nom</label><input type="text" id="nex-name" class="text-input"></div>
-                    <div><label>Matériel</label><input type="text" id="nex-materiel" class="text-input" placeholder="Ex : Haltères, Box, Aucun"></div>
-                </div>
-                <div class="modal-field">
-                    <label>Catégories (plusieurs possibles)</label>
-                    <div class="chip-row" id="nex-cat-chips" style="margin-bottom:0;"></div>
-                </div>
-                <div class="modal-field">
-                    <label>Consigne</label>
-                    <input type="text" id="nex-consigne" class="text-input" placeholder="Ex : dos plat, descente lente">
-                </div>
-                <button class="nav-btn" onclick="createExercise()">Créer l'exercice</button>
-                <span id="nex-status" style="font-weight:700; font-size:0.8rem; margin-left:10px;"></span>
+                <button class="toggle-btn" onclick="openNewExForm()">Nouvel exercice</button>
             </div>
 
             <div class="search-row">
                 <input type="text" id="exm-search" class="text-input" placeholder="Rechercher..." oninput="renderExerciseManager()">
             </div>
             <div class="chip-row" id="exm-cat-chips"></div>
+            <div style="font-weight:700; font-size:0.75rem; color:var(--muted); margin-bottom:8px;" id="exm-count"></div>
 
             <div class="table-card card" style="margin-bottom:0;">
                 <div id="exm-list"></div>
@@ -463,12 +492,67 @@
     </div>
 </div>
 
+<div id="sheet-overlay" onclick="closeSheets()"></div>
+
+<div id="exercise-sheet" class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+        <div class="sheet-head-top">
+            <h3>Ajouter des exercices</h3>
+            <button class="sheet-close" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div class="search-row" style="margin-bottom:10px;">
+            <input type="text" id="ex-search" class="text-input" placeholder="Rechercher un exercice..." oninput="renderExerciseCatalog()">
+        </div>
+        <div class="chip-row" id="cat-chips" style="margin-bottom:0;"></div>
+    </div>
+    <div class="sheet-count" id="ex-catalog-count"></div>
+    <div class="sheet-body"><div id="ex-catalog"></div></div>
+</div>
+
+<div id="template-sheet" class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+        <div class="sheet-head-top">
+            <h3>Charger un modèle</h3>
+            <button class="sheet-close" onclick="closeSheets()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+    </div>
+    <div class="sheet-body"><div id="template-list"></div></div>
+</div>
+
+<div id="ex-modal-overlay" onclick="closeExModal()"></div>
+<div id="ex-modal">
+    <h3 id="ex-modal-title">Nouvel exercice</h3>
+    <input type="hidden" id="nex-editing-id">
+    <div class="add-panel-grid" style="grid-template-columns: 1fr 1fr;">
+        <div><label>Nom</label><input type="text" id="nex-name" class="text-input"></div>
+        <div><label>Matériel</label><input type="text" id="nex-materiel" class="text-input" placeholder="Ex : Haltères, Box, Aucun"></div>
+    </div>
+    <div class="modal-field" style="margin-top:12px;">
+        <label>Catégories (plusieurs possibles)</label>
+        <div class="chip-row" id="nex-cat-chips" style="margin-bottom:0;"></div>
+    </div>
+    <div class="modal-field">
+        <label>Consigne</label>
+        <input type="text" id="nex-consigne" class="text-input" placeholder="Ex : dos plat, descente lente">
+    </div>
+    <div class="modal-actions">
+        <button class="nav-btn btn-full" onclick="createExercise()" id="nex-submit">Créer l'exercice</button>
+        <button class="toggle-btn btn-full" onclick="closeExModal()">Annuler</button>
+    </div>
+    <div id="nex-status" style="font-weight:700; font-size:0.8rem; margin-top:8px;"></div>
+</div>
+
 <div id="player">
     <div class="player-top">
         <button class="player-icon-btn" onclick="closePlayer()" aria-label="Fermer">
             <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
         <div class="player-progress"><div class="player-progress-fill" id="player-progress-fill"></div></div>
+        <button class="player-icon-btn" onclick="togglePlayerBg()" id="player-bg-btn" aria-label="Fond">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-6 6"/></svg>
+        </button>
         <span class="player-counter" id="player-counter"></span>
     </div>
     <div class="player-body">
@@ -767,7 +851,7 @@
         applyTrainingBg(screenId === 'session-screen');
         if(screenId === 'home-screen') renderHome();
         if(screenId === 'calendar-screen') initCalendar();
-        if(screenId === 'builder-screen') { renderExerciseCatalog(); renderBuilderSession(); renderTemplates(); }
+        if(screenId === 'builder-screen') renderBuilderSession();
         if(screenId === 'exercises-screen') renderExerciseManager();
         if(screenId === 'history-screen') renderHistoryScreen();
         if(screenId === 'settings-screen') renderAmbiancePicker();
@@ -903,6 +987,67 @@
         }
     }
 
+    // --- BOTTOM SHEETS ---
+    function openExerciseSheet() {
+        renderExerciseCatalog();
+        document.getElementById('sheet-overlay').classList.add('open');
+        document.getElementById('exercise-sheet').classList.add('open');
+    }
+
+    function openTemplateSheet() {
+        renderTemplates();
+        document.getElementById('sheet-overlay').classList.add('open');
+        document.getElementById('template-sheet').classList.add('open');
+    }
+
+    function closeSheets() {
+        document.getElementById('sheet-overlay').classList.remove('open');
+        document.getElementById('exercise-sheet').classList.remove('open');
+        document.getElementById('template-sheet').classList.remove('open');
+        openAddPanelId = null;
+    }
+
+    // --- MODALE EXERCICE (création + édition) ---
+    function openNewExForm() {
+        editingExerciseId = null;
+        document.getElementById('ex-modal-title').innerText = "Nouvel exercice";
+        document.getElementById('nex-submit').innerText = "Créer l'exercice";
+        document.getElementById('nex-name').value = "";
+        document.getElementById('nex-materiel').value = "";
+        document.getElementById('nex-consigne').value = "";
+        newExCats.clear();
+        CAT_LIST.forEach(c => { const el = document.getElementById('nex-chip-' + c); if (el) el.classList.remove('active'); });
+        document.getElementById('nex-status').innerText = "";
+        document.getElementById('ex-modal-overlay').classList.add('open');
+        document.getElementById('ex-modal').classList.add('open');
+    }
+
+    function openEditExForm(id) {
+        const e = getExerciseBank().find(x => x.id === id);
+        if (!e) return;
+        editingExerciseId = id;
+        document.getElementById('ex-modal-title').innerText = "Modifier l'exercice";
+        document.getElementById('nex-submit').innerText = "Enregistrer";
+        document.getElementById('nex-name').value = cleanName(e.n);
+        document.getElementById('nex-materiel').value = (e.m && e.m.toLowerCase() !== 'aucun') ? e.m : "";
+        document.getElementById('nex-consigne').value = e.c || "";
+        newExCats = new Set(getCats(e));
+        CAT_LIST.forEach(c => { const el = document.getElementById('nex-chip-' + c); if (el) el.classList.toggle('active', newExCats.has(c)); });
+        document.getElementById('nex-status').innerText = "";
+        document.getElementById('ex-modal-overlay').classList.add('open');
+        document.getElementById('ex-modal').classList.add('open');
+    }
+
+    function closeExModal() {
+        document.getElementById('ex-modal-overlay').classList.remove('open');
+        document.getElementById('ex-modal').classList.remove('open');
+    }
+
+    function clearBuilder() {
+        currentBuilderList = [];
+        renderBuilderSession();
+    }
+
     // --- CONSTRUCTEUR : catalogue filtrable + séance manuelle ---
     let selectedCats = new Set(CAT_LIST);
     let currentBuilderList = [];
@@ -1027,9 +1172,12 @@
     }
 
     function renderBuilderSession() {
-        const card = document.getElementById('builder-session-card');
-        card.style.display = currentBuilderList.length ? 'block' : 'none';
-        if (currentBuilderList.length === 0) return;
+        const has = currentBuilderList.length > 0;
+        document.getElementById('builder-session-card').style.display = has ? 'block' : 'none';
+        document.getElementById('builder-empty').style.display = has ? 'none' : 'block';
+        document.getElementById('builder-actions-card').style.display = has ? 'block' : 'none';
+        document.getElementById('clear-builder-btn').style.display = has ? 'inline-block' : 'none';
+        if (!has) return;
 
         document.getElementById('builder-count').innerText = currentBuilderList.length;
         const durEl = document.getElementById('builder-duration');
@@ -1039,9 +1187,8 @@
         document.getElementById('builder-session-list').innerHTML = currentBuilderList.map((e, idx) => `
             <div class="ex-row">
                 <div class="ex-row-info">
-                    ${catTagsHtml(e)}
-                    <b> ${cleanName(e.n)}</b>
-                    <div class="ex-row-sub">${e.r}${e.m ? " — " + e.m : ""}</div>
+                    <b>${cleanName(e.n)}</b> ${catTagsHtml(e)}
+                    <div class="ex-row-sub">${e.r}${e.m && e.m.toLowerCase() !== 'aucun' ? " — " + e.m : ""}</div>
                 </div>
                 <div class="ex-row-actions">
                     <button class="mini-btn" onclick="removeFromSessionByIndex(${idx})">Retirer</button>
@@ -1050,8 +1197,9 @@
         `).join("");
     }
 
-    // --- CRÉATION D'EXERCICES (multi-tags) ---
+    // --- CRÉATION / ÉDITION D'EXERCICES (multi-tags) ---
     let newExCats = new Set();
+    let editingExerciseId = null;
 
     function initNewExCatChips() {
         const row = document.getElementById('nex-cat-chips');
@@ -1065,35 +1213,35 @@
         document.getElementById('nex-chip-' + c).classList.toggle('active', newExCats.has(c));
     }
 
-    function toggleNewExForm() {
-        const f = document.getElementById('new-ex-form');
-        f.style.display = f.style.display === 'none' ? 'block' : 'none';
-    }
-
     function createExercise() {
         const name = document.getElementById('nex-name').value.trim();
         const status = document.getElementById('nex-status');
         if (!name) { status.innerText = "Le nom est obligatoire."; return; }
         if (newExCats.size === 0) { status.innerText = "Choisis au moins une catégorie."; return; }
 
-        customExercises.push({
-            id: 'U' + Date.now(),
+        const payload = {
             n: name,
             cats: [...newExCats],
             c: document.getElementById('nex-consigne').value.trim(),
-            m: document.getElementById('nex-materiel').value.trim() || "Aucun",
-            r: "3x10",
-            userCreated: true
-        });
-        saveCustomExercises();
+            m: document.getElementById('nex-materiel').value.trim() || "Aucun"
+        };
 
-        document.getElementById('nex-name').value = "";
-        document.getElementById('nex-consigne').value = "";
-        document.getElementById('nex-materiel').value = "";
-        newExCats.clear();
-        CAT_LIST.forEach(c => document.getElementById('nex-chip-' + c).classList.remove('active'));
-        status.innerText = "Exercice créé.";
-        setTimeout(() => { status.innerText = ""; }, 2000);
+        if (editingExerciseId) {
+            const idx = customExercises.findIndex(e => e.id === editingExerciseId);
+            if (idx >= 0) {
+                // Exercice créé par l'utilisateur : édition directe
+                customExercises[idx] = { ...customExercises[idx], ...payload };
+            } else {
+                // Exercice d'origine édité : on crée une copie perso et on masque l'original
+                customExercises.push({ ...payload, id: 'U' + Date.now(), r: "3x10", userCreated: true });
+                if (!deletedExerciseIds.includes(editingExerciseId)) { deletedExerciseIds.push(editingExerciseId); saveDeletedExercises(); }
+            }
+        } else {
+            customExercises.push({ ...payload, id: 'U' + Date.now(), r: "3x10", userCreated: true });
+        }
+        saveCustomExercises();
+        editingExerciseId = null;
+        closeExModal();
         renderExerciseManager();
         renderExerciseCatalog();
     }
@@ -1125,23 +1273,29 @@
             (!q || cleanName(e.n).toLowerCase().includes(q) || (e.c || "").toLowerCase().includes(q))
         );
 
+        const countEl = document.getElementById('exm-count');
+        if (countEl) countEl.innerText = `${filtered.length} exercice${filtered.length > 1 ? 's' : ''}`;
+
         if (filtered.length === 0) {
             listEl.innerHTML = `<div class="empty-hint">Aucun exercice ne correspond au filtre.</div>`;
             return;
         }
 
-        listEl.innerHTML = filtered.map(e => `
+        listEl.innerHTML = filtered.map(e => {
+            const hasMat = e.m && e.m.toLowerCase() !== 'aucun';
+            return `
             <div class="ex-row">
                 <div class="ex-row-info">
-                    ${catTagsHtml(e)}
-                    <b> ${cleanName(e.n)}</b>${e.userCreated ? ` <span class="ex-row-sub" style="display:inline;">(créé par toi)</span>` : ""}
-                    <div class="ex-row-sub">${e.c || ""}${e.m ? " — " + e.m : ""}</div>
+                    <b>${cleanName(e.n)}</b> ${catTagsHtml(e)}
+                    ${e.c ? `<div class="ex-row-sub">${e.c}</div>` : ""}
+                    <div class="ex-row-sub">${hasMat ? "Matériel : " + e.m : "Sans matériel"}${e.userCreated ? " · créé par toi" : ""}</div>
                 </div>
                 <div class="ex-row-actions">
+                    <button class="mini-btn" onclick="openEditExForm('${e.id}')">Modifier</button>
                     <button class="mini-btn" id="del-ex-${e.id}" onclick="deleteExercise('${e.id}')">Supprimer</button>
                 </div>
-            </div>
-        `).join("");
+            </div>`;
+        }).join("");
     }
 
     function deleteExercise(id) {
@@ -1233,8 +1387,8 @@
         const ex = getTemplateEx(id);
         if (!ex) return;
         currentBuilderList = ex.map(e => ({ ...e }));
+        closeSheets();
         renderBuilderSession();
-        renderExerciseCatalog();
         window.scrollTo(0, 0);
     }
 
@@ -1650,15 +1804,30 @@
     // --- PLAYER DE SÉANCE ---
     let playerIndex = 0;
     let restTimer = null, restSecs = 0;
+    let playerPhotoOn = true;
 
     function openPlayer() {
         const s = getData(currentId);
         if (!s || !s.ex.length) return;
         playerIndex = 0;
-        const p = document.getElementById('player');
-        p.classList.toggle('no-photo', !ambianceUrl());
-        p.classList.add('open');
+        playerPhotoOn = !!ambianceUrl();
+        applyPlayerBg();
+        document.getElementById('player').classList.add('open');
         renderPlayer();
+    }
+
+    function applyPlayerBg() {
+        const p = document.getElementById('player');
+        const canPhoto = !!ambianceUrl();
+        p.classList.toggle('no-photo', !(playerPhotoOn && canPhoto));
+        const btn = document.getElementById('player-bg-btn');
+        if (btn) btn.style.opacity = canPhoto ? '1' : '0.4';
+    }
+
+    function togglePlayerBg() {
+        if (!ambianceUrl()) return; // ambiance neutre : rien à basculer
+        playerPhotoOn = !playerPhotoOn;
+        applyPlayerBg();
     }
 
     function closePlayer() {
@@ -1769,6 +1938,8 @@
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         if (document.getElementById('player') && document.getElementById('player').classList.contains('open')) { closePlayer(); return; }
+        if (document.getElementById('ex-modal').classList.contains('open')) { closeExModal(); return; }
+        if (document.getElementById('exercise-sheet').classList.contains('open') || document.getElementById('template-sheet').classList.contains('open')) { closeSheets(); return; }
         if (document.getElementById('plan-modal').style.display === 'block') { closePlanModal(); return; }
         closeAllPanels();
     });
