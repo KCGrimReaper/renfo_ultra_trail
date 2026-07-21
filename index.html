@@ -188,6 +188,29 @@
         .cal-day.today { border: 2px solid var(--ink); background: #fff; }
         .cal-day.today .day-num { color: var(--ink); }
         .done-badge { background: #fff; color: var(--wood); border: 1px solid var(--wood); font-size: 0.6rem; font-weight: bold; padding: 3px 4px; border-radius: 4px; text-transform: uppercase; text-align: center; word-break: break-word; line-height: 1.2; margin-top: 3px; }
+
+        /* --- PLAYER DE SÉANCE --- */
+        #player { position: fixed; inset: 0; background: linear-gradient(160deg, var(--ink) 0%, #4a3a28 100%); z-index: 4000; display: none; flex-direction: column; color: #fff; padding: 20px; }
+        #player.open { display: flex; }
+        .player-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .player-progress { flex-grow: 1; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; }
+        .player-progress-fill { height: 100%; background: var(--sand); border-radius: 3px; transition: width 0.3s; }
+        .player-counter { font-weight: 900; font-size: 0.8rem; letter-spacing: 1px; color: var(--sand); white-space: nowrap; }
+        .player-close { background: rgba(255,255,255,0.12); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: bold; text-transform: uppercase; font-size: 0.75rem; cursor: pointer; }
+        .player-body { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 14px; overflow-y: auto; padding: 10px 0; }
+        .player-body h2 { margin: 0; font-size: 2rem; text-transform: uppercase; font-weight: 900; line-height: 1.15; }
+        .player-reps { font-size: 2.6rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--sand); }
+        .player-sub { font-size: 1.05rem; line-height: 1.5; color: rgba(255,255,255,0.85); max-width: 520px; }
+        .player-materiel { font-weight: 800; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; color: var(--sand); }
+        .player-rest { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; display: none; }
+        .player-rest.on { display: block; }
+        .player-rest-btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .rest-btn { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 16px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+        .rest-btn:hover { background: rgba(255,255,255,0.25); }
+        .player-nav { display: flex; gap: 12px; padding-top: 10px; }
+        .player-nav button { flex: 1; padding: 16px; border-radius: 12px; border: none; font-weight: 900; text-transform: uppercase; font-size: 0.9rem; cursor: pointer; }
+        .player-prev { background: rgba(255,255,255,0.12); color: #fff; }
+        .player-next { background: var(--sand); color: var(--ink); }
     </style>
     </style>
 </head>
@@ -300,7 +323,8 @@
             </table>
         </div>
 
-        <button class="nav-btn btn-full" id="done-btn" style="margin-top:15px;" onclick="markSessionDone()">Terminer la séance</button>
+        <button class="nav-btn btn-full" style="margin-top:15px; background: var(--wood);" onclick="openPlayer()">Démarrer la séance guidée</button>
+        <button class="nav-btn btn-full" id="done-btn" style="margin-top:10px;" onclick="markSessionDone()">Terminer la séance</button>
     </div>
 
     <div id="builder-screen" class="screen">
@@ -416,6 +440,32 @@
             </div>
             <div id="import-status" style="font-weight:700; margin-top:10px;"></div>
         </div>
+    </div>
+</div>
+
+<div id="player">
+    <div class="player-top">
+        <span class="player-counter" id="player-counter"></span>
+        <div class="player-progress"><div class="player-progress-fill" id="player-progress-fill"></div></div>
+        <button class="player-close" onclick="closePlayer()">Fermer</button>
+    </div>
+    <div class="player-body">
+        <div id="player-tags"></div>
+        <h2 id="player-name"></h2>
+        <div class="player-reps" id="player-reps"></div>
+        <div class="player-materiel" id="player-materiel"></div>
+        <div class="player-sub" id="player-consigne"></div>
+        <div class="player-rest" id="player-rest">00:00</div>
+        <div class="player-rest-btns">
+            <button class="rest-btn" onclick="startRest(30)">Repos 30s</button>
+            <button class="rest-btn" onclick="startRest(60)">Repos 1min</button>
+            <button class="rest-btn" onclick="startRest(90)">Repos 1min30</button>
+            <button class="rest-btn" id="rest-stop" style="display:none;" onclick="stopRest()">Arrêter le repos</button>
+        </div>
+    </div>
+    <div class="player-nav">
+        <button class="player-prev" onclick="playerPrev()">Précédent</button>
+        <button class="player-next" id="player-next-btn" onclick="playerNext()">Suivant</button>
     </div>
 </div>
 
@@ -1251,9 +1301,9 @@
         if (!listEl) return;
 
         const builtins = Object.keys(data).filter(id => !deletedTemplateIds.includes(id))
-            .map(id => templateRowHtml(id, data[id].t, data[id].ex.length, "modèle intégré"));
+            .map(id => templateRowHtml(id, data[id].t, data[id].ex.length, "modèle d'origine"));
         const customs = Object.keys(customTemplates)
-            .map(id => templateRowHtml(id, customTemplates[id].name, customTemplates[id].ex.length, "modèle personnalisé"));
+            .map(id => templateRowHtml(id, customTemplates[id].name, customTemplates[id].ex.length, "créé par toi"));
 
         const html = builtins.concat(customs).join("");
         listEl.innerHTML = html || `<div class="empty-hint">Aucun modèle. Construis une séance et enregistre-la comme modèle.</div>`;
@@ -1556,6 +1606,114 @@
             }
         } catch (err) { /* pas de handle stocké */ }
     }
+
+    // --- PLAYER DE SÉANCE ---
+    let playerIndex = 0;
+    let restTimer = null, restSecs = 0;
+
+    function openPlayer() {
+        const s = getData(currentId);
+        if (!s || !s.ex.length) return;
+        playerIndex = 0;
+        document.getElementById('player').classList.add('open');
+        renderPlayer();
+    }
+
+    function closePlayer() {
+        stopRest();
+        document.getElementById('player').classList.remove('open');
+    }
+
+    function renderPlayer() {
+        const s = getData(currentId);
+        if (!s) return;
+        const e = s.ex[playerIndex];
+        const total = s.ex.length;
+
+        document.getElementById('player-counter').innerText = `Exercice ${playerIndex + 1} / ${total}`;
+        document.getElementById('player-progress-fill').style.width = `${((playerIndex + 1) / total) * 100}%`;
+        document.getElementById('player-tags').innerHTML = catTagsHtml(e);
+        document.getElementById('player-name').innerText = cleanName(e.n);
+        document.getElementById('player-reps').innerText = e.r || "";
+        document.getElementById('player-materiel').innerText = e.m && e.m.toLowerCase() !== "aucun" ? e.m : "";
+        document.getElementById('player-consigne').innerText = e.c || "";
+        document.getElementById('player-next-btn').innerText = (playerIndex === total - 1) ? "Terminer la séance" : "Suivant";
+    }
+
+    function playerNext() {
+        const s = getData(currentId);
+        if (!s) return;
+        stopRest();
+        if (playerIndex >= s.ex.length - 1) {
+            markSessionDone();
+            closePlayer();
+            return;
+        }
+        playerIndex++;
+        renderPlayer();
+    }
+
+    function playerPrev() {
+        if (playerIndex === 0) return;
+        stopRest();
+        playerIndex--;
+        renderPlayer();
+    }
+
+    function startRest(secs) {
+        stopRest();
+        restSecs = secs;
+        const el = document.getElementById('player-rest');
+        el.classList.add('on');
+        document.getElementById('rest-stop').style.display = 'inline-block';
+        const tick = () => {
+            const m = Math.floor(restSecs / 60), sc = restSecs % 60;
+            el.innerText = `${m < 10 ? '0' + m : m}:${sc < 10 ? '0' + sc : sc}`;
+            if (restSecs <= 0) { stopRest(); return; }
+            restSecs--;
+        };
+        tick();
+        restTimer = setInterval(tick, 1000);
+    }
+
+    function stopRest() {
+        clearInterval(restTimer);
+        restTimer = null;
+        const el = document.getElementById('player-rest');
+        if (el) el.classList.remove('on');
+        const st = document.getElementById('rest-stop');
+        if (st) st.style.display = 'none';
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (!document.getElementById('player').classList.contains('open')) return;
+        if (e.key === 'ArrowRight') playerNext();
+        if (e.key === 'ArrowLeft') playerPrev();
+    });
+
+    // --- FERMETURE GLOBALE (clic à côté / Échap) ---
+    function closeAllPanels() {
+        let changed = false;
+        if (openAddPanelId) { openAddPanelId = null; renderExerciseCatalog(); changed = true; }
+        if (planTplOpenId) { planTplOpenId = null; renderTemplates(); changed = true; }
+        return changed;
+    }
+
+    document.addEventListener('click', (e) => {
+        // Un clic hors d'un panneau inline et hors d'un bouton d'action le referme
+        if ((openAddPanelId || planTplOpenId)
+            && !e.target.closest('.add-panel')
+            && !e.target.closest('.mini-btn')) {
+            closeAllPanels();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (document.getElementById('player') && document.getElementById('player').classList.contains('open')) { closePlayer(); return; }
+        if (document.getElementById('plan-modal').style.display === 'block') { closePlanModal(); return; }
+        closeAllPanels();
+    });
 
     // --- INIT ---
     initCatChips();
