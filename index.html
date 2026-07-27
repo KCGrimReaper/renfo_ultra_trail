@@ -138,6 +138,11 @@
         /* --- CONSTRUCTEUR --- */
         .chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; }
         .chip { padding:8px 14px; border-radius:8px; border:1px solid var(--line); cursor:pointer; font-weight:800; font-size:0.75rem; text-transform:uppercase; background:#fff; color: var(--ink); transition:0.2s; user-select:none; }
+        /* Chips compactes dans le formulaire d'exercice */
+        #ex-modal .chip-row { gap: 6px; }
+        #ex-modal .chip { padding: 5px 10px; font-size: 0.7rem; font-weight: 700; text-transform: none; border-radius: 7px; }
+        #ex-modal .modal-field { margin-bottom: 12px; }
+        #ex-modal .modal-field label { margin-bottom: 5px; }
         .chip.active { background: var(--ink); color:#fff; border-color: var(--ink); }
         .comp-bar { display:flex; height:24px; border-radius:6px; overflow:hidden; margin:12px 0; border:1px solid var(--line); background: var(--bg); }
         .comp-seg { transition: width 0.3s; }
