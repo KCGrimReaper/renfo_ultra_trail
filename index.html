@@ -204,6 +204,15 @@
         .builder-empty-state > svg { width: 52px; height: 52px; stroke: var(--sand); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .builder-empty-state p { margin: 0; color: var(--muted); font-weight: 600; line-height: 1.6; }
 
+        /* --- FILTRES AVANCÉS --- */
+        .filter-axis { margin-bottom: 12px; }
+        .filter-axis-label { display: block; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
+        .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .filter-chip { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 700; font-size: 0.72rem; cursor: pointer; transition: 0.15s; }
+        .filter-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .filter-chip:hover { border-color: var(--ink); }
+        .filter-clear { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--wood); background: none; border: none; cursor: pointer; padding: 4px 0; }
+
         /* --- MODALE EXERCICE --- */
         #ex-modal-overlay { position: fixed; inset: 0; background: rgba(43,38,32,0.45); z-index: 3600; display: none; }
         #ex-modal-overlay.open { display: block; }
@@ -465,8 +474,11 @@
             <div class="search-row">
                 <input type="text" id="exm-search" class="text-input" placeholder="Rechercher..." oninput="renderExerciseManager()">
             </div>
-            <div class="chip-row" id="exm-cat-chips"></div>
-            <div style="font-weight:700; font-size:0.75rem; color:var(--muted); margin-bottom:8px;" id="exm-count"></div>
+            <div id="exm-cat-chips"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-weight:700; font-size:0.75rem; color:var(--muted);" id="exm-count"></span>
+                <button class="filter-clear" onclick="clearFilter(exmFilter); initExmCatChips(); renderExerciseManager();">Effacer les filtres</button>
+            </div>
 
             <div class="table-card card" style="margin-bottom:0;">
                 <div id="exm-list"></div>
@@ -536,7 +548,11 @@
             <input type="text" id="ex-search" class="text-input" placeholder="Rechercher un exercice..." oninput="renderExerciseCatalog()">
             <button class="toggle-btn" onclick="openNewExForm()" style="white-space:nowrap;">+ Créer</button>
         </div>
-        <div class="chip-row" id="cat-chips" style="margin-bottom:0;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button class="toggle-btn" id="builder-filter-toggle" onclick="toggleBuilderFilters()">Filtres</button>
+            <button class="filter-clear" onclick="clearFilter(builderFilter); initCatChips(); renderExerciseCatalog();">Effacer</button>
+        </div>
+        <div id="cat-chips" style="display:none; margin-top:12px;"></div>
     </div>
     <div class="sheet-count" id="ex-catalog-count"></div>
     <div class="sheet-body"><div id="ex-catalog"></div></div>
@@ -557,13 +573,28 @@
 <div id="ex-modal">
     <h3 id="ex-modal-title">Nouvel exercice</h3>
     <input type="hidden" id="nex-editing-id">
-    <div class="add-panel-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="add-panel-grid" style="grid-template-columns: 1fr;">
         <div><label>Nom</label><input type="text" id="nex-name" class="text-input"></div>
-        <div><label>Matériel</label><input type="text" id="nex-materiel" class="text-input" placeholder="Ex : Haltères, Box, Aucun"></div>
     </div>
     <div class="modal-field" style="margin-top:12px;">
         <label>Catégories (plusieurs possibles)</label>
         <div class="chip-row" id="nex-cat-chips" style="margin-bottom:0;"></div>
+    </div>
+    <div class="modal-field">
+        <label>Objectif trail</label>
+        <div class="chip-row" id="nex-goal-chips" style="margin-bottom:0;"></div>
+    </div>
+    <div class="modal-field">
+        <label>Zone du corps</label>
+        <div class="chip-row" id="nex-zone-chips" style="margin-bottom:0;"></div>
+    </div>
+    <div class="modal-field">
+        <label>Matériel</label>
+        <div class="chip-row" id="nex-equip-chips" style="margin-bottom:0;"></div>
+    </div>
+    <div class="modal-field">
+        <label>Latéralité</label>
+        <div class="chip-row" id="nex-uni-chips" style="margin-bottom:0;"></div>
     </div>
     <div class="modal-field">
         <label>Consigne</label>
@@ -753,8 +784,115 @@
         return e.cat ? [e.cat] : [];
     }
 
+    // === ATTRIBUTS ÉTENDUS (matériel, zone, latéralité, objectif) ===
+    const EQUIP_LABELS = { aucun: "Aucun", elastique: "Élastique", halteres: "Haltères", box: "Box", coussin: "Coussin", roulette: "Roulette", tapis: "Tapis", obstacle: "Obstacle" };
+    const EQUIP_LIST = ["aucun", "elastique", "halteres", "box", "coussin", "roulette", "tapis", "obstacle"];
+    const ZONE_LABELS = { quadriceps: "Quadriceps", fessiers: "Fessiers", ischios: "Ischios", mollets: "Mollets/Chevilles", tronc: "Tronc/Gainage", hanches: "Hanches" };
+    const ZONE_LIST = ["quadriceps", "fessiers", "ischios", "mollets", "tronc", "hanches"];
+    const GOAL_LABELS = { montee: "Montée", descente: "Descente", prevention: "Prévention", stabilite: "Stabilité" };
+    const GOAL_LIST = ["montee", "descente", "prevention", "stabilite"];
+    const UNI_LABELS = { uni: "Unilatéral", bi: "Bilatéral" };
+
+    // Pré-remplissage des attributs pour les 28 exercices d'origine (corrigeable ensuite).
+    // Clé = nom sans le préfixe numéroté.
+    const SEED_ATTRS = {
+        "Monster Walk":     { equip: ["elastique"], zones: ["hanches", "fessiers"], uni: "bi", goals: ["prevention", "stabilite"] },
+        "Fentes Bulgares":  { equip: ["box", "halteres"], zones: ["quadriceps", "fessiers"], uni: "uni", goals: ["montee"] },
+        "SDT unilatéral":   { equip: ["halteres"], zones: ["ischios", "fessiers"], uni: "uni", goals: ["montee", "stabilite"] },
+        "Hip Thrust uni.":  { equip: ["box"], zones: ["fessiers"], uni: "uni", goals: ["montee"] },
+        "Step-down Face":   { equip: ["box"], zones: ["quadriceps"], uni: "uni", goals: ["descente"] },
+        "Roulette Abdos":   { equip: ["roulette"], zones: ["tronc"], uni: "bi", goals: ["stabilite"] },
+        "Pallof Press":     { equip: ["elastique"], zones: ["tronc"], uni: "bi", goals: ["stabilite"] },
+        "Abduction debout": { equip: ["elastique"], zones: ["hanches", "fessiers"], uni: "uni", goals: ["prevention", "stabilite"] },
+        "Step-up Haut":     { equip: ["box"], zones: ["quadriceps", "fessiers"], uni: "uni", goals: ["montee"] },
+        "Good Morning":     { equip: ["halteres"], zones: ["ischios", "fessiers"], uni: "bi", goals: ["montee"] },
+        "Pont Fessier":     { equip: ["tapis"], zones: ["fessiers"], uni: "bi", goals: ["montee"] },
+        "Step-down Lat.":   { equip: ["box"], zones: ["quadriceps"], uni: "uni", goals: ["descente", "stabilite"] },
+        "Gainage Commando": { equip: ["tapis"], zones: ["tronc"], uni: "bi", goals: ["stabilite"] },
+        "Planche Lat. Rot.":{ equip: ["tapis"], zones: ["tronc"], uni: "uni", goals: ["stabilite"] },
+        "Box Jumps":        { equip: ["box"], zones: ["quadriceps", "mollets"], uni: "bi", goals: ["montee"] },
+        "Drop Jumps":       { equip: ["box"], zones: ["quadriceps", "mollets"], uni: "bi", goals: ["descente"] },
+        "Fentes sautées":   { equip: ["aucun"], zones: ["quadriceps", "fessiers"], uni: "uni", goals: ["montee", "descente"] },
+        "Sauts Grenouille": { equip: ["aucun"], zones: ["quadriceps", "mollets"], uni: "bi", goals: ["montee"] },
+        "Sauts Latéraux":   { equip: ["obstacle"], zones: ["mollets", "quadriceps"], uni: "bi", goals: ["descente", "stabilite"] },
+        "Skater Jumps":     { equip: ["aucun"], zones: ["fessiers", "mollets"], uni: "uni", goals: ["descente", "stabilite"] },
+        "Spanish Squat":    { equip: ["elastique"], zones: ["quadriceps"], uni: "bi", goals: ["prevention"] },
+        "L'Huître":         { equip: ["elastique"], zones: ["hanches", "fessiers"], uni: "uni", goals: ["prevention"] },
+        "Équilibre":        { equip: ["coussin"], zones: ["mollets"], uni: "uni", goals: ["prevention", "stabilite"] },
+        "Bird-Dog":         { equip: ["tapis"], zones: ["tronc", "fessiers"], uni: "uni", goals: ["stabilite"] },
+        "Squat Coussin":    { equip: ["coussin"], zones: ["quadriceps"], uni: "bi", goals: ["prevention", "stabilite"] },
+        "Psoas March":      { equip: ["elastique"], zones: ["hanches"], uni: "uni", goals: ["prevention"] },
+        "L'Horloge":        { equip: ["coussin"], zones: ["mollets"], uni: "uni", goals: ["prevention", "stabilite"] },
+        "Micro-gainage":    { equip: ["elastique"], zones: ["tronc"], uni: "bi", goals: ["stabilite"] }
+    };
+
+    // Renvoie les attributs d'un exercice (ceux stockés, ou le seed pour les exos d'origine)
+    function getAttrs(e) {
+        const name = cleanName(e.n);
+        const seed = SEED_ATTRS[name] || {};
+        return {
+            equip: e.equip || seed.equip || [],
+            zones: e.zones || seed.zones || [],
+            uni: e.uni || seed.uni || null,
+            goals: e.goals || seed.goals || []
+        };
+    }
+
     function catTagsHtml(e) {
         return getCats(e).map(c => `<span class="cat-tag cat-${c}">${CAT_LABELS[c]}</span>`).join(" ");
+    }
+
+    // === FILTRES AVANCÉS (partagés catalogue construire + gestionnaire) ===
+    function makeFilterState() {
+        return { cats: new Set(), equip: new Set(), zones: new Set(), goals: new Set(), uni: new Set() };
+    }
+
+    function exerciseMatchesFilter(e, f, q) {
+        if (q && !cleanName(e.n).toLowerCase().includes(q) && !(e.c || "").toLowerCase().includes(q)) return false;
+        if (f.cats.size && !getCats(e).some(c => f.cats.has(c))) return false;
+        const a = getAttrs(e);
+        if (f.equip.size && !a.equip.some(x => f.equip.has(x))) return false;
+        if (f.zones.size && !a.zones.some(x => f.zones.has(x))) return false;
+        if (f.goals.size && !a.goals.some(x => f.goals.has(x))) return false;
+        if (f.uni.size && (!a.uni || !f.uni.has(a.uni))) return false;
+        return true;
+    }
+
+    function renderFilterPanel(containerId, filterState, onChange) {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        const axis = (title, list, labels, set) => `
+            <div class="filter-axis">
+                <span class="filter-axis-label">${title}</span>
+                <div class="filter-chips">
+                    ${list.map(k => `<button class="filter-chip${set.has(k) ? ' on' : ''}" data-set="${title}" data-k="${k}">${labels[k]}</button>`).join("")}
+                </div>
+            </div>`;
+        el.innerHTML =
+            axis("Catégorie", CAT_LIST, CAT_LABELS, filterState.cats) +
+            axis("Objectif", GOAL_LIST, GOAL_LABELS, filterState.goals) +
+            axis("Zone", ZONE_LIST, ZONE_LABELS, filterState.zones) +
+            axis("Matériel", EQUIP_LIST, EQUIP_LABELS, filterState.equip) +
+            axis("Latéralité", ["uni", "bi"], UNI_LABELS, filterState.uni);
+
+        el.querySelectorAll('.filter-chip').forEach(btn => {
+            btn.onclick = () => {
+                const map = { "Catégorie": filterState.cats, "Objectif": filterState.goals, "Zone": filterState.zones, "Matériel": filterState.equip, "Latéralité": filterState.uni };
+                const set = map[btn.dataset.set];
+                const k = btn.dataset.k;
+                if (set.has(k)) set.delete(k); else set.add(k);
+                btn.classList.toggle('on', set.has(k));
+                onChange();
+            };
+        });
+    }
+
+    function filterActiveCount(f) {
+        return f.cats.size + f.equip.size + f.zones.size + f.goals.size + f.uni.size;
+    }
+
+    function clearFilter(f) {
+        f.cats.clear(); f.equip.clear(); f.zones.clear(); f.goals.clear(); f.uni.clear();
     }
 
     // --- DURÉE ESTIMÉE ---
@@ -1040,15 +1178,56 @@
     }
 
     // --- MODALE EXERCICE (création + édition) ---
+    // États des sélections dans la modale
+    let nexSel = { cats: new Set(), goals: new Set(), zones: new Set(), equip: new Set(), uni: new Set() };
+
+    function initNexChips() {
+        const build = (containerId, list, labels, setKey) => {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            el.innerHTML = list.map(k => `<button type="button" class="chip" data-k="${k}" data-axis="${setKey}">${labels[k]}</button>`).join("");
+            el.querySelectorAll('.chip').forEach(btn => {
+                btn.onclick = () => {
+                    const set = nexSel[setKey];
+                    const k = btn.dataset.k;
+                    if (setKey === 'uni') { // latéralité = choix unique
+                        set.clear();
+                        el.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+                        set.add(k); btn.classList.add('active');
+                    } else {
+                        if (set.has(k)) set.delete(k); else set.add(k);
+                        btn.classList.toggle('active', set.has(k));
+                    }
+                };
+            });
+        };
+        build('nex-cat-chips', CAT_LIST, CAT_LABELS, 'cats');
+        build('nex-goal-chips', GOAL_LIST, GOAL_LABELS, 'goals');
+        build('nex-zone-chips', ZONE_LIST, ZONE_LABELS, 'zones');
+        build('nex-equip-chips', EQUIP_LIST, EQUIP_LABELS, 'equip');
+        build('nex-uni-chips', ["uni", "bi"], UNI_LABELS, 'uni');
+    }
+
+    function syncNexChips() {
+        [['nex-cat-chips','cats'],['nex-goal-chips','goals'],['nex-zone-chips','zones'],['nex-equip-chips','equip'],['nex-uni-chips','uni']].forEach(([cid, key]) => {
+            const el = document.getElementById(cid);
+            if (!el) return;
+            el.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', nexSel[key].has(b.dataset.k)));
+        });
+    }
+
+    function resetNexSel() {
+        nexSel = { cats: new Set(), goals: new Set(), zones: new Set(), equip: new Set(), uni: new Set() };
+    }
+
     function openNewExForm() {
         editingExerciseId = null;
         document.getElementById('ex-modal-title').innerText = "Nouvel exercice";
         document.getElementById('nex-submit').innerText = "Créer l'exercice";
         document.getElementById('nex-name').value = "";
-        document.getElementById('nex-materiel').value = "";
         document.getElementById('nex-consigne').value = "";
-        newExCats.clear();
-        CAT_LIST.forEach(c => { const el = document.getElementById('nex-chip-' + c); if (el) el.classList.remove('active'); });
+        resetNexSel();
+        syncNexChips();
         document.getElementById('nex-status').innerText = "";
         document.getElementById('ex-modal-overlay').classList.add('open');
         document.getElementById('ex-modal').classList.add('open');
@@ -1061,10 +1240,16 @@
         document.getElementById('ex-modal-title').innerText = "Modifier l'exercice";
         document.getElementById('nex-submit').innerText = "Enregistrer";
         document.getElementById('nex-name').value = cleanName(e.n);
-        document.getElementById('nex-materiel').value = (e.m && e.m.toLowerCase() !== 'aucun') ? e.m : "";
         document.getElementById('nex-consigne').value = e.c || "";
-        newExCats = new Set(getCats(e));
-        CAT_LIST.forEach(c => { const el = document.getElementById('nex-chip-' + c); if (el) el.classList.toggle('active', newExCats.has(c)); });
+        const a = getAttrs(e);
+        nexSel = {
+            cats: new Set(getCats(e)),
+            goals: new Set(a.goals),
+            zones: new Set(a.zones),
+            equip: new Set(a.equip),
+            uni: new Set(a.uni ? [a.uni] : [])
+        };
+        syncNexChips();
         document.getElementById('nex-status').innerText = "";
         document.getElementById('ex-modal-overlay').classList.add('open');
         document.getElementById('ex-modal').classList.add('open');
@@ -1081,21 +1266,26 @@
     }
 
     // --- CONSTRUCTEUR : catalogue filtrable + séance manuelle ---
-    let selectedCats = new Set(CAT_LIST);
+    let builderFilter = makeFilterState();
     let currentBuilderList = [];
     let openAddPanelId = null;
 
     function initCatChips() {
-        const row = document.getElementById('cat-chips');
-        row.innerHTML = CAT_LIST.map(c =>
-            `<div class="chip active" id="chip-${c}" onclick="toggleCat('${c}')">${CAT_LABELS[c]}</div>`
-        ).join("");
+        renderFilterPanel('cat-chips', builderFilter, () => { renderExerciseCatalog(); updateBuilderFilterLabel(); });
+        updateBuilderFilterLabel();
     }
 
-    function toggleCat(c) {
-        if (selectedCats.has(c)) { selectedCats.delete(c); } else { selectedCats.add(c); }
-        document.getElementById('chip-' + c).classList.toggle('active', selectedCats.has(c));
-        renderExerciseCatalog();
+    function toggleBuilderFilters() {
+        const el = document.getElementById('cat-chips');
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function updateBuilderFilterLabel() {
+        const btn = document.getElementById('builder-filter-toggle');
+        if (!btn) return;
+        const n = filterActiveCount(builderFilter);
+        btn.innerText = n ? `Filtres (${n})` : "Filtres";
+        btn.classList.toggle('primary', n > 0);
     }
 
     function cleanName(n) { return n.replace(/^\d+\.\s*/, ''); }
@@ -1111,17 +1301,16 @@
         const q = (document.getElementById('ex-search').value || "").trim().toLowerCase();
         const bank = getExerciseBank();
 
-        const filtered = bank.filter(e =>
-            getCats(e).some(c => selectedCats.has(c)) &&
-            (!q || cleanName(e.n).toLowerCase().includes(q) || (e.c || "").toLowerCase().includes(q))
-        );
+        const filtered = bank.filter(e => exerciseMatchesFilter(e, builderFilter, q));
 
-        // Compteur de résultats
         const countEl = document.getElementById('ex-catalog-count');
-        if (countEl) countEl.innerText = `${filtered.length} exercice${filtered.length > 1 ? 's' : ''}`;
+        if (countEl) {
+            const n = filterActiveCount(builderFilter);
+            countEl.innerText = `${filtered.length} exercice${filtered.length > 1 ? 's' : ''}` + (n ? ` · ${n} filtre${n > 1 ? 's' : ''}` : "");
+        }
 
         if (filtered.length === 0) {
-            listEl.innerHTML = `<div class="empty-hint">Aucun exercice ne correspond au filtre.</div>`;
+            listEl.innerHTML = `<div class="empty-hint">Aucun exercice ne correspond aux filtres.</div>`;
             return;
         }
 
@@ -1298,42 +1487,36 @@
         };
     }
 
-    // --- CRÉATION / ÉDITION D'EXERCICES (multi-tags) ---
-    let newExCats = new Set();
+    // --- CRÉATION / ÉDITION D'EXERCICES ---
     let editingExerciseId = null;
-
-    function initNewExCatChips() {
-        const row = document.getElementById('nex-cat-chips');
-        row.innerHTML = CAT_LIST.map(c =>
-            `<div class="chip" id="nex-chip-${c}" onclick="toggleNewExCat('${c}')">${CAT_LABELS[c]}</div>`
-        ).join("");
-    }
-
-    function toggleNewExCat(c) {
-        if (newExCats.has(c)) { newExCats.delete(c); } else { newExCats.add(c); }
-        document.getElementById('nex-chip-' + c).classList.toggle('active', newExCats.has(c));
-    }
 
     function createExercise() {
         const name = document.getElementById('nex-name').value.trim();
         const status = document.getElementById('nex-status');
         if (!name) { status.innerText = "Le nom est obligatoire."; return; }
-        if (newExCats.size === 0) { status.innerText = "Choisis au moins une catégorie."; return; }
+        if (nexSel.cats.size === 0) { status.innerText = "Choisis au moins une catégorie."; return; }
+
+        const equip = [...nexSel.equip];
+        // Champ d'affichage 'm' dérivé du matériel structuré
+        const mDisplay = equip.length ? equip.filter(x => x !== 'aucun').map(x => EQUIP_LABELS[x]).join(" + ") || "Aucun" : "Aucun";
 
         const payload = {
             n: name,
-            cats: [...newExCats],
+            cats: [...nexSel.cats],
+            goals: [...nexSel.goals],
+            zones: [...nexSel.zones],
+            equip: equip,
+            uni: [...nexSel.uni][0] || null,
             c: document.getElementById('nex-consigne').value.trim(),
-            m: document.getElementById('nex-materiel').value.trim() || "Aucun"
+            m: mDisplay
         };
 
         if (editingExerciseId) {
             const idx = customExercises.findIndex(e => e.id === editingExerciseId);
             if (idx >= 0) {
-                // Exercice créé par l'utilisateur : édition directe
                 customExercises[idx] = { ...customExercises[idx], ...payload };
             } else {
-                // Exercice d'origine édité : on crée une copie perso et on masque l'original
+                // Exercice d'origine édité : copie perso + masquage de l'original
                 customExercises.push({ ...payload, id: 'U' + Date.now(), r: "3x10", userCreated: true });
                 if (!deletedExerciseIds.includes(editingExerciseId)) { deletedExerciseIds.push(editingExerciseId); saveDeletedExercises(); }
             }
@@ -1346,7 +1529,6 @@
         closeExModal();
         renderExerciseManager();
 
-        // Si la sheet d'ajout est ouverte, on filtre sur le nouvel exo pour le retrouver direct
         const sheetOpen = document.getElementById('exercise-sheet').classList.contains('open');
         if (created && sheetOpen) {
             const searchEl = document.getElementById('ex-search');
@@ -1356,20 +1538,20 @@
     }
 
     // --- GESTIONNAIRE D'EXERCICES (écran dédié) ---
-    let exmSelectedCats = new Set(CAT_LIST);
+    let exmFilter = makeFilterState();
     let exDeletePending = null;
 
     function initExmCatChips() {
-        const row = document.getElementById('exm-cat-chips');
-        row.innerHTML = CAT_LIST.map(c =>
-            `<div class="chip active" id="exm-chip-${c}" onclick="toggleExmCat('${c}')">${CAT_LABELS[c]}</div>`
-        ).join("");
+        renderFilterPanel('exm-cat-chips', exmFilter, renderExerciseManager);
     }
 
-    function toggleExmCat(c) {
-        if (exmSelectedCats.has(c)) { exmSelectedCats.delete(c); } else { exmSelectedCats.add(c); }
-        document.getElementById('exm-chip-' + c).classList.toggle('active', exmSelectedCats.has(c));
-        renderExerciseManager();
+    function attrsSummary(e) {
+        const a = getAttrs(e);
+        const parts = [];
+        if (a.goals.length) parts.push(a.goals.map(g => GOAL_LABELS[g]).join(", "));
+        if (a.zones.length) parts.push(a.zones.map(z => ZONE_LABELS[z]).join(", "));
+        if (a.uni) parts.push(UNI_LABELS[a.uni]);
+        return parts.join(" · ");
     }
 
     function renderExerciseManager() {
@@ -1377,26 +1559,28 @@
         if (!listEl) return;
         const q = (document.getElementById('exm-search').value || "").trim().toLowerCase();
 
-        const filtered = getExerciseBank().filter(e =>
-            getCats(e).some(c => exmSelectedCats.has(c)) &&
-            (!q || cleanName(e.n).toLowerCase().includes(q) || (e.c || "").toLowerCase().includes(q))
-        );
+        const filtered = getExerciseBank().filter(e => exerciseMatchesFilter(e, exmFilter, q));
 
         const countEl = document.getElementById('exm-count');
-        if (countEl) countEl.innerText = `${filtered.length} exercice${filtered.length > 1 ? 's' : ''}`;
+        if (countEl) {
+            const n = filterActiveCount(exmFilter);
+            countEl.innerText = `${filtered.length} exercice${filtered.length > 1 ? 's' : ''}` + (n ? ` · ${n} filtre${n > 1 ? 's' : ''}` : "");
+        }
 
         if (filtered.length === 0) {
-            listEl.innerHTML = `<div class="empty-hint">Aucun exercice ne correspond au filtre.</div>`;
+            listEl.innerHTML = `<div class="empty-hint">Aucun exercice ne correspond aux filtres.</div>`;
             return;
         }
 
         listEl.innerHTML = filtered.map(e => {
             const hasMat = e.m && e.m.toLowerCase() !== 'aucun';
+            const summary = attrsSummary(e);
             return `
             <div class="ex-row">
                 <div class="ex-row-info">
                     <b>${cleanName(e.n)}</b> ${catTagsHtml(e)}
                     ${e.c ? `<div class="ex-row-sub">${e.c}</div>` : ""}
+                    ${summary ? `<div class="ex-row-sub">${summary}</div>` : ""}
                     <div class="ex-row-sub">${hasMat ? "Matériel : " + e.m : "Sans matériel"}${e.userCreated ? " · créé par toi" : ""}</div>
                 </div>
                 <div class="ex-row-actions">
@@ -2132,7 +2316,7 @@
     // --- INIT ---
     initCatChips();
     initExmCatChips();
-    initNewExCatChips();
+    initNexChips();
     refreshModalSessionOptions();
     renderHome();
     renderExerciseCatalog();
