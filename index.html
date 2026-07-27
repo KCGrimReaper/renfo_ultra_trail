@@ -525,6 +525,7 @@
         </div>
         <div class="search-row" style="margin-bottom:10px;">
             <input type="text" id="ex-search" class="text-input" placeholder="Rechercher un exercice..." oninput="renderExerciseCatalog()">
+            <button class="toggle-btn" onclick="openNewExForm()" style="white-space:nowrap;">+ Créer</button>
         </div>
         <div class="chip-row" id="cat-chips" style="margin-bottom:0;"></div>
     </div>
@@ -1331,9 +1332,17 @@
             customExercises.push({ ...payload, id: 'U' + Date.now(), r: "3x10", userCreated: true });
         }
         saveCustomExercises();
+        const created = !editingExerciseId;
         editingExerciseId = null;
         closeExModal();
         renderExerciseManager();
+
+        // Si la sheet d'ajout est ouverte, on filtre sur le nouvel exo pour le retrouver direct
+        const sheetOpen = document.getElementById('exercise-sheet').classList.contains('open');
+        if (created && sheetOpen) {
+            const searchEl = document.getElementById('ex-search');
+            if (searchEl) searchEl.value = name;
+        }
         renderExerciseCatalog();
     }
 
