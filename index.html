@@ -2140,6 +2140,45 @@
     let playerIndex = 0;
     let restTimer = null, restSecs = 0;
     let playerPhotoOn = true;
+    let applyingPlayerRemote = false; // évite de repousser un état reçu
+
+    // Pousse l'état courant du player vers le cloud (si connecté)
+    function pushPlayerState(open) {
+        if (applyingPlayerRemote) return;
+        if (window.Cloud && window.Cloud.isSignedIn() && window.Cloud.pushPlayer) {
+            window.Cloud.pushPlayer({ open: open, sessionId: currentId, index: playerIndex, ts: Date.now() });
+        }
+    }
+
+    // Applique un état player reçu d'un autre appareil
+    function applyPlayerState(st) {
+        if (!st) return;
+        applyingPlayerRemote = true;
+        try {
+            const isOpen = document.getElementById('player').classList.contains('open');
+            if (st.open) {
+                // Ouvre / met à jour le player pour refléter l'appareil distant
+                if (st.sessionId && st.sessionId !== currentId) currentId = st.sessionId;
+                const s = getData(currentId);
+                if (s && s.ex.length) {
+                    playerIndex = Math.max(0, Math.min(st.index || 0, s.ex.length - 1));
+                    if (!isOpen) {
+                        playerPhotoOn = !!ambianceUrl();
+                        applyPlayerBg();
+                        document.getElementById('player').classList.add('open');
+                    }
+                    stopRest();
+                    renderPlayer();
+                }
+            } else if (isOpen) {
+                // L'autre appareil a fermé la séance
+                stopRest();
+                document.getElementById('player').classList.remove('open');
+            }
+        } finally {
+            applyingPlayerRemote = false;
+        }
+    }
 
     // Photo utilisée dans le player : celle de l'ambiance, sinon la première photo disponible
     function playerPhotoUrl() {
@@ -2152,11 +2191,11 @@
         const s = getData(currentId);
         if (!s || !s.ex.length) return;
         playerIndex = 0;
-        // Photo affichée par défaut si l'ambiance en a une ; sinon fond neutre mais bouton actif
         playerPhotoOn = !!ambianceUrl();
         applyPlayerBg();
         document.getElementById('player').classList.add('open');
         renderPlayer();
+        pushPlayerState(true);
     }
 
     function applyPlayerBg() {
@@ -2168,7 +2207,7 @@
         }
         p.classList.toggle('no-photo', !showPhoto);
         const btn = document.getElementById('player-bg-btn');
-        if (btn) btn.style.display = url ? 'flex' : 'none'; // pas de photo du tout dispo -> bouton caché
+        if (btn) btn.style.display = url ? 'flex' : 'none';
     }
 
     function togglePlayerBg() {
@@ -2179,6 +2218,7 @@
     function closePlayer() {
         stopRest();
         document.getElementById('player').classList.remove('open');
+        pushPlayerState(false);
     }
 
     function renderPlayer() {
@@ -2208,6 +2248,7 @@
         }
         playerIndex++;
         renderPlayer();
+        pushPlayerState(true);
     }
 
     function playerPrev() {
@@ -2215,6 +2256,7 @@
         stopRest();
         playerIndex--;
         renderPlayer();
+        pushPlayerState(true);
     }
 
     function startRest(secs) {
@@ -2370,6 +2412,7 @@
     window.applyCloudState = applyCloudState;
     window.localSnapshot = localSnapshot;
     window.onAuthChanged = onAuthChanged;
+    window.applyPlayerState = applyPlayerState;
 </script>
 
 <script type="module">
@@ -2431,8 +2474,19 @@
             try {
                 await setDoc(userDocRef(currentUser.uid), { [key]: value, _updatedAt: Date.now() }, { merge: true });
             } catch (e) { console.log('Cloud push échoué :', e); }
+        },
+
+        // Pousse l'état du player (synchro multi-appareils du mode guidé)
+        async pushPlayer(playerState) {
+            if (!currentUser) return;
+            lastPushedPlayer = JSON.stringify(playerState);
+            try {
+                await setDoc(userDocRef(currentUser.uid), { _player: playerState }, { merge: true });
+            } catch (e) { console.log('Push player échoué :', e); }
         }
     };
+
+    let lastPushedPlayer = null;
 
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
@@ -2460,11 +2514,21 @@
         unsubscribe = onSnapshot(userDocRef(user.uid), (snap) => {
             if (!snap.exists()) return;
             const data = snap.data();
+
+            // a) Données
             const state = {};
             DATA_KEYS.forEach(k => { if (data[k] !== undefined) state[k] = data[k]; });
             applyingRemote = true;
             if (window.applyCloudState) window.applyCloudState(state);
             applyingRemote = false;
+
+            // b) État du player (mode guidé synchronisé), en ignorant l'écho de notre propre push
+            if (data._player && window.applyPlayerState) {
+                const incoming = JSON.stringify(data._player);
+                if (incoming !== lastPushedPlayer) {
+                    window.applyPlayerState(data._player);
+                }
+            }
         });
     });
 
