@@ -148,6 +148,12 @@
         .ex-row.compact { padding:10px 15px; }
         .ex-row.compact .ex-row-info { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
         .ex-row.added { background: var(--bg); }
+        .ex-row.draggable { cursor: default; }
+        .ex-row.dragging { opacity: 0.5; background: var(--bg); }
+        .ex-row.drag-over { border-top: 2px solid var(--wood); }
+        .drag-handle { background: transparent; border: none; cursor: grab; padding: 4px; display: flex; align-items: center; touch-action: none; flex-shrink: 0; color: var(--stone); }
+        .drag-handle:active { cursor: grabbing; }
+        .drag-handle svg { width: 20px; height: 20px; fill: currentColor; }
         .ex-row-info { flex-grow:1; min-width: 200px; }
         .ex-row-sub { font-size:0.8rem; color: var(--stone); margin-top:3px; }
         .ex-row-actions { display:flex; gap:6px; flex-shrink:0; }
@@ -1200,7 +1206,10 @@
         renderCompositionBar('builder-comp-bar', 'builder-comp-legend', currentBuilderList);
 
         document.getElementById('builder-session-list').innerHTML = currentBuilderList.map((e, idx) => `
-            <div class="ex-row">
+            <div class="ex-row draggable" draggable="true" data-idx="${idx}">
+                <button class="drag-handle" aria-label="Déplacer">
+                    <svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>
+                </button>
                 <div class="ex-row-info">
                     <b>${cleanName(e.n)}</b> ${catTagsHtml(e)}
                     <div class="ex-row-sub">${e.r}${e.m && e.m.toLowerCase() !== 'aucun' ? " — " + e.m : ""}</div>
@@ -1210,6 +1219,73 @@
                 </div>
             </div>
         `).join("");
+        initBuilderDnd();
+    }
+
+    // --- RÉORGANISATION (drag & drop souris + tactile) ---
+    let dragFromIdx = null;
+
+    function moveBuilderItem(from, to) {
+        if (from === to || from == null || to == null) return;
+        const item = currentBuilderList.splice(from, 1)[0];
+        currentBuilderList.splice(to, 0, item);
+        renderBuilderSession();
+    }
+
+    function initBuilderDnd() {
+        const list = document.getElementById('builder-session-list');
+        const rows = [...list.querySelectorAll('.ex-row.draggable')];
+
+        rows.forEach(row => {
+            // --- Souris (HTML5 drag) ---
+            row.addEventListener('dragstart', (e) => {
+                dragFromIdx = +row.dataset.idx;
+                row.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                rows.forEach(r => r.classList.remove('drag-over'));
+            });
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const overIdx = +row.dataset.idx;
+                if (overIdx !== dragFromIdx) row.classList.add('drag-over');
+            });
+            row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                moveBuilderItem(dragFromIdx, +row.dataset.idx);
+                dragFromIdx = null;
+            });
+
+            // --- Tactile (poignée) ---
+            const handle = row.querySelector('.drag-handle');
+            handle.addEventListener('touchstart', (ev) => {
+                ev.preventDefault();
+                dragFromIdx = +row.dataset.idx;
+                row.classList.add('dragging');
+            }, { passive: false });
+        });
+
+        // Déplacement tactile global (on suit le doigt et on repère la ligne survolée)
+        list.ontouchmove = (ev) => {
+            if (dragFromIdx == null) return;
+            ev.preventDefault();
+            const t = ev.touches[0];
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const overRow = el && el.closest('.ex-row.draggable');
+            rows.forEach(r => r.classList.remove('drag-over'));
+            if (overRow && +overRow.dataset.idx !== dragFromIdx) overRow.classList.add('drag-over');
+        };
+        list.ontouchend = (ev) => {
+            if (dragFromIdx == null) return;
+            const t = ev.changedTouches[0];
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const overRow = el && el.closest('.ex-row.draggable');
+            if (overRow) moveBuilderItem(dragFromIdx, +overRow.dataset.idx);
+            dragFromIdx = null;
+        };
     }
 
     // --- CRÉATION / ÉDITION D'EXERCICES (multi-tags) ---
