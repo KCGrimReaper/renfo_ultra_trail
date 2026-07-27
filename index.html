@@ -493,6 +493,15 @@
             <div class="header-box">
                 <h1 class="screen-title">Réglages</h1>
             </div>
+            <div class="day-header" style="grid-column:auto; margin-top:0;">Compte & synchronisation</div>
+            <p style="font-weight:600; margin-top:12px;" id="auth-status">Non connecté — données locales uniquement.</p>
+            <div class="settings-row">
+                <button class="nav-btn" id="signin-btn" onclick="window.Cloud && window.Cloud.signIn()">Se connecter avec Google</button>
+                <button class="toggle-btn" id="signout-btn" onclick="window.Cloud && window.Cloud.signOut()" style="display:none;">Se déconnecter</button>
+            </div>
+            <p style="font-size:0.8rem; color:var(--muted);">Connecté, tes séances, ton planning et ton historique se synchronisent automatiquement sur tous tes appareils.</p>
+        </div>
+        <div class="card">
             <div class="day-header" style="grid-column:auto; margin-top:0;">Ambiance par défaut</div>
             <p style="font-weight:600; margin-top:12px;">Choisis l'ambiance affichée en fond pendant la séance guidée. "Neutre" garde un fond sobre.</p>
             <div class="ambiance-grid" id="ambiance-grid"></div>
@@ -718,12 +727,12 @@
     let deletedExerciseIds = JSON.parse(localStorage.getItem('ultraDeletedExercises')) || [];
 
     function saveCustomExercises() {
-        localStorage.setItem('ultraCustomExercises', JSON.stringify(customExercises));
+        persist('ultraCustomExercises', customExercises);
         autoBackup();
     }
 
     function saveDeletedExercises() {
-        localStorage.setItem('ultraDeletedExercises', JSON.stringify(deletedExerciseIds));
+        persist('ultraDeletedExercises', deletedExerciseIds);
         autoBackup();
     }
 
@@ -814,7 +823,7 @@
     }
 
     function saveCustomSessions() {
-        localStorage.setItem('ultraCustomSessions', JSON.stringify(customSessions));
+        persist('ultraCustomSessions', customSessions);
         autoBackup();
     }
 
@@ -822,7 +831,7 @@
     let history = JSON.parse(localStorage.getItem('ultraHistory')) || [];
 
     function saveHistory() {
-        localStorage.setItem('ultraHistory', JSON.stringify(history));
+        persist('ultraHistory', history);
         autoBackup();
     }
 
@@ -995,7 +1004,7 @@
         if(id === "" || !id) { delete plannedData[dateStr]; } 
         else { plannedData[dateStr] = { id: id }; }
 
-        localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
+        persist('ultraPlan', plannedData);
         autoBackup();
         closePlanModal();
         renderCalendar();
@@ -1446,11 +1455,11 @@
             };
         });
         localStorage.setItem('ultraTplMigrated', '1');
-        localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates));
+        persist('ultraTemplates', customTemplates);
     })();
 
     function saveTemplates() {
-        localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates));
+        persist('ultraTemplates', customTemplates);
         autoBackup();
     }
 
@@ -1534,7 +1543,7 @@
         const sessionId = storeSessionFromEx(getTemplateEx(id), getTemplateName(id));
         if (!sessionId) return;
         plannedData[dateStr] = { id: sessionId };
-        localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
+        persist('ultraPlan', plannedData);
         autoBackup();
         planTplOpenId = null;
         calDate = new Date(dateStr + 'T12:00:00');
@@ -1611,7 +1620,7 @@
         const id = storeBuiltSession();
         if (!id) return;
         plannedData[dateStr] = { id: id };
-        localStorage.setItem('ultraPlan', JSON.stringify(plannedData));
+        persist('ultraPlan', plannedData);
         autoBackup();
         currentBuilderList = [];
         renderBuilderSession();
@@ -1792,12 +1801,12 @@
             try {
                 const payload = JSON.parse(e.target.result);
                 if (payload.plannedData) { plannedData = payload.plannedData; localStorage.setItem('ultraPlan', JSON.stringify(plannedData)); }
-                if (payload.customSessions) { customSessions = payload.customSessions; localStorage.setItem('ultraCustomSessions', JSON.stringify(customSessions)); }
-                if (payload.customExercises) { customExercises = payload.customExercises; localStorage.setItem('ultraCustomExercises', JSON.stringify(customExercises)); }
-                if (payload.customTemplates) { customTemplates = payload.customTemplates; localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates)); }
-                if (payload.deletedExerciseIds) { deletedExerciseIds = payload.deletedExerciseIds; localStorage.setItem('ultraDeletedExercises', JSON.stringify(deletedExerciseIds)); }
-                if (payload.deletedTemplateIds) { deletedTemplateIds = payload.deletedTemplateIds; localStorage.setItem('ultraDeletedTemplates', JSON.stringify(deletedTemplateIds)); }
-                if (payload.history) { history = payload.history; localStorage.setItem('ultraHistory', JSON.stringify(history)); }
+                if (payload.customSessions) { customSessions = payload.customSessions; persist('ultraCustomSessions', customSessions); }
+                if (payload.customExercises) { customExercises = payload.customExercises; persist('ultraCustomExercises', customExercises); }
+                if (payload.customTemplates) { customTemplates = payload.customTemplates; persist('ultraTemplates', customTemplates); }
+                if (payload.deletedExerciseIds) { deletedExerciseIds = payload.deletedExerciseIds; persist('ultraDeletedExercises', deletedExerciseIds); }
+                if (payload.deletedTemplateIds) { deletedTemplateIds = payload.deletedTemplateIds; persist('ultraDeletedTemplates', deletedTemplateIds); }
+                if (payload.history) { history = payload.history; persist('ultraHistory', history); }
                 refreshModalSessionOptions();
                 document.getElementById('import-status').style.color = '#000';
                 document.getElementById('import-status').innerText = "Import réussi.";
@@ -2055,6 +2064,71 @@
         closeAllPanels();
     });
 
+    // === COUCHE DE PERSISTANCE (local + cloud si connecté) ===
+    // window.Cloud est fourni par le module Firebase (voir bas de page). Absent = mode 100% local.
+    const DATA_KEYS = {
+        ultraCustomExercises: () => customExercises,
+        ultraDeletedExercises: () => deletedExerciseIds,
+        ultraCustomSessions: () => customSessions,
+        ultraHistory: () => history,
+        ultraPlan: () => plannedData,
+        ultraTemplates: () => customTemplates,
+        ultraDeletedTemplates: () => deletedTemplateIds
+    };
+
+    function persist(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+        if (window.Cloud && window.Cloud.isSignedIn() && !window.Cloud.isApplyingRemote()) {
+            window.Cloud.push(key, value);
+        }
+    }
+
+    // Applique un état complet reçu du cloud dans les variables + localStorage, puis rafraîchit l'UI
+    function applyCloudState(state) {
+        if (!state) return;
+        if (state.ultraCustomExercises) { customExercises = state.ultraCustomExercises; localStorage.setItem('ultraCustomExercises', JSON.stringify(customExercises)); }
+        if (state.ultraDeletedExercises) { deletedExerciseIds = state.ultraDeletedExercises; localStorage.setItem('ultraDeletedExercises', JSON.stringify(deletedExerciseIds)); }
+        if (state.ultraCustomSessions) { customSessions = state.ultraCustomSessions; localStorage.setItem('ultraCustomSessions', JSON.stringify(customSessions)); }
+        if (state.ultraHistory) { history = state.ultraHistory; localStorage.setItem('ultraHistory', JSON.stringify(history)); }
+        if (state.ultraPlan) { plannedData = state.ultraPlan; localStorage.setItem('ultraPlan', JSON.stringify(plannedData)); }
+        if (state.ultraTemplates) { customTemplates = state.ultraTemplates; localStorage.setItem('ultraTemplates', JSON.stringify(customTemplates)); }
+        if (state.ultraDeletedTemplates) { deletedTemplateIds = state.ultraDeletedTemplates; localStorage.setItem('ultraDeletedTemplates', JSON.stringify(deletedTemplateIds)); }
+        // Rafraîchit l'écran courant
+        refreshModalSessionOptions();
+        const active = document.querySelector('.screen.active');
+        if (active) {
+            const id = active.id;
+            if (id === 'home-screen') renderHome();
+            if (id === 'calendar-screen') initCalendar();
+            if (id === 'builder-screen') renderBuilderSession();
+            if (id === 'exercises-screen') renderExerciseManager();
+            if (id === 'history-screen') renderHistoryScreen();
+        }
+    }
+
+    // Snapshot complet des données locales (pour push initial vers le cloud)
+    function localSnapshot() {
+        const snap = {};
+        Object.keys(DATA_KEYS).forEach(k => { snap[k] = DATA_KEYS[k](); });
+        return snap;
+    }
+
+    // Appelé par le module Firebase quand l'état d'auth change
+    function onAuthChanged(user) {
+        const el = document.getElementById('auth-status');
+        const btnIn = document.getElementById('signin-btn');
+        const btnOut = document.getElementById('signout-btn');
+        if (user) {
+            if (el) el.innerHTML = `Connecté : <b>${user.email}</b>`;
+            if (btnIn) btnIn.style.display = 'none';
+            if (btnOut) btnOut.style.display = 'inline-flex';
+        } else {
+            if (el) el.innerText = "Non connecté — données locales uniquement.";
+            if (btnIn) btnIn.style.display = 'inline-flex';
+            if (btnOut) btnOut.style.display = 'none';
+        }
+    }
+
     // --- INIT ---
     initCatChips();
     initExmCatChips();
@@ -2065,6 +2139,111 @@
     renderTemplates();
     restoreBackupHandle();
     setAmbiance(currentAmbiance);
+
+    // Exposition pour le module Firebase (chargé ensuite en type=module)
+    window.applyCloudState = applyCloudState;
+    window.localSnapshot = localSnapshot;
+    window.onAuthChanged = onAuthChanged;
+</script>
+
+<script type="module">
+    // === FIREBASE : authentification Google + synchro Firestore temps réel ===
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+        from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+        from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCF06WS8Otgbv3C6rjIrsr_9u7kAOkBDq8",
+        authDomain: "renfo-ultra-trail.firebaseapp.com",
+        projectId: "renfo-ultra-trail",
+        storageBucket: "renfo-ultra-trail.firebasestorage.app",
+        messagingSenderId: "216129266317",
+        appId: "1:216129266317:web:77845b5327c086a16b38c4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    let currentUser = null;
+    let unsubscribe = null;
+    let applyingRemote = false; // évite de repousser ce qu'on vient de recevoir
+
+    const DATA_KEYS = ['ultraCustomExercises','ultraDeletedExercises','ultraCustomSessions','ultraHistory','ultraPlan','ultraTemplates','ultraDeletedTemplates'];
+
+    function userDocRef(uid) { return doc(db, 'users', uid); }
+
+    // Fusion simple : le cloud fait foi champ par champ, complété par le local si le cloud n'a pas la clé
+    function mergeStates(local, remote) {
+        const out = {};
+        DATA_KEYS.forEach(k => {
+            if (remote && remote[k] !== undefined) out[k] = remote[k];
+            else if (local && local[k] !== undefined) out[k] = local[k];
+        });
+        return out;
+    }
+
+    window.Cloud = {
+        isSignedIn() { return !!currentUser; },
+
+        async signIn() {
+            try { await signInWithPopup(auth, provider); }
+            catch (e) { alert("Connexion impossible : " + (e && e.message ? e.message : e)); }
+        },
+
+        async signOut() {
+            if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+            await signOut(auth);
+        },
+
+        // Pousse une clé de données vers Firestore (appelé par persist())
+        async push(key, value) {
+            if (!currentUser || applyingRemote) return;
+            try {
+                await setDoc(userDocRef(currentUser.uid), { [key]: value, _updatedAt: Date.now() }, { merge: true });
+            } catch (e) { console.log('Cloud push échoué :', e); }
+        }
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        if (typeof window.onAuthChanged === 'function') window.onAuthChanged(user);
+
+        if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+        if (!user) return;
+
+        // 1) Fusion initiale local <-> cloud
+        try {
+            const snap = await getDoc(userDocRef(user.uid));
+            const remote = snap.exists() ? snap.data() : null;
+            const local = window.localSnapshot ? window.localSnapshot() : {};
+            const merged = mergeStates(local, remote);
+
+            applyingRemote = true;
+            if (window.applyCloudState) window.applyCloudState(merged);
+            applyingRemote = false;
+
+            // On réécrit l'état fusionné dans le cloud (première synchro)
+            await setDoc(userDocRef(user.uid), { ...merged, _updatedAt: Date.now() }, { merge: true });
+        } catch (e) { console.log('Fusion initiale échouée :', e); }
+
+        // 2) Écoute temps réel des changements distants (autres appareils)
+        unsubscribe = onSnapshot(userDocRef(user.uid), (snap) => {
+            if (!snap.exists()) return;
+            const data = snap.data();
+            const state = {};
+            DATA_KEYS.forEach(k => { if (data[k] !== undefined) state[k] = data[k]; });
+            applyingRemote = true;
+            if (window.applyCloudState) window.applyCloudState(state);
+            applyingRemote = false;
+        });
+    });
+
+    // Expose le drapeau pour que persist() ne repousse pas pendant l'application d'un état distant
+    window.Cloud.isApplyingRemote = () => applyingRemote;
 </script>
 
 </body>

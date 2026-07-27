@@ -1,4 +1,4 @@
-const CACHE_NAME = 'renfo-ultra-trail-v2';
+const CACHE_NAME = 'renfo-ultra-trail-v3';
 const APP_SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -19,6 +19,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // Firebase / Google APIs : toujours réseau direct, jamais de cache
+  const url = event.request.url;
+  if (url.includes('firebase') || url.includes('googleapis.com') || url.includes('gstatic.com') || url.includes('firestore')) {
+    return;
+  }
 
   // Pages HTML : réseau d'abord (toujours la dernière version), cache en secours hors-ligne
   if (event.request.mode === 'navigate' || event.request.destination === 'document') {
