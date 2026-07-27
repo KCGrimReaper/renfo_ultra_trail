@@ -204,13 +204,23 @@
         .builder-empty-state > svg { width: 52px; height: 52px; stroke: var(--sand); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .builder-empty-state p { margin: 0; color: var(--muted); font-weight: 600; line-height: 1.6; }
 
-        /* --- FILTRES AVANCÉS --- */
-        .filter-axis { margin-bottom: 12px; }
-        .filter-axis-label { display: block; font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 6px; }
-        .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-        .filter-chip { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 700; font-size: 0.72rem; cursor: pointer; transition: 0.15s; }
-        .filter-chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
-        .filter-chip:hover { border-color: var(--ink); }
+        /* --- FILTRES AVANCÉS (barre de dropdowns) --- */
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .filter-drop { position: relative; }
+        .filter-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 700; font-size: 0.78rem; cursor: pointer; transition: 0.15s; white-space: nowrap; }
+        .filter-btn:hover { border-color: var(--ink); }
+        .filter-btn.has-active { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .filter-btn .chev { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+        .filter-drop.open .filter-btn .chev { transform: rotate(180deg); }
+        .filter-btn .count-badge { background: var(--sand); color: var(--ink); border-radius: 10px; padding: 0 6px; font-size: 0.68rem; font-weight: 900; min-width: 16px; text-align: center; }
+        .filter-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 30px rgba(43,38,32,0.18); padding: 8px; min-width: 190px; display: none; max-height: 300px; overflow-y: auto; }
+        .filter-drop.open .filter-menu { display: block; }
+        .filter-opt { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+        .filter-opt:hover { background: var(--bg); }
+        .filter-opt .check { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--line); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .filter-opt.sel .check { background: var(--ink); border-color: var(--ink); }
+        .filter-opt .check svg { width: 12px; height: 12px; stroke: #fff; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+        .filter-opt.sel .check svg { opacity: 1; }
         .filter-clear { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: var(--wood); background: none; border: none; cursor: pointer; padding: 4px 0; }
 
         /* --- MODALE EXERCICE --- */
@@ -548,11 +558,10 @@
             <input type="text" id="ex-search" class="text-input" placeholder="Rechercher un exercice..." oninput="renderExerciseCatalog()">
             <button class="toggle-btn" onclick="openNewExForm()" style="white-space:nowrap;">+ Créer</button>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <button class="toggle-btn" id="builder-filter-toggle" onclick="toggleBuilderFilters()">Filtres</button>
-            <button class="filter-clear" onclick="clearFilter(builderFilter); initCatChips(); renderExerciseCatalog();">Effacer</button>
+        <div id="cat-chips" style="margin-bottom:8px;"></div>
+        <div style="text-align:right;">
+            <button class="filter-clear" onclick="clearFilter(builderFilter); initCatChips(); renderExerciseCatalog();">Effacer les filtres</button>
         </div>
-        <div id="cat-chips" style="display:none; margin-top:12px;"></div>
     </div>
     <div class="sheet-count" id="ex-catalog-count"></div>
     <div class="sheet-body"><div id="ex-catalog"></div></div>
@@ -858,34 +867,76 @@
         return true;
     }
 
+    const FILTER_AXES = [
+        { key: 'cats',  label: 'Catégorie',   list: CAT_LIST,   labels: CAT_LABELS },
+        { key: 'goals', label: 'Objectif',    list: GOAL_LIST,  labels: GOAL_LABELS },
+        { key: 'zones', label: 'Zone',        list: ZONE_LIST,  labels: ZONE_LABELS },
+        { key: 'equip', label: 'Matériel',    list: EQUIP_LIST, labels: EQUIP_LABELS },
+        { key: 'uni',   label: 'Latéralité',  list: ['uni','bi'], labels: UNI_LABELS }
+    ];
+
+    const CHECK_SVG = `<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>`;
+
     function renderFilterPanel(containerId, filterState, onChange) {
         const el = document.getElementById(containerId);
         if (!el) return;
-        const axis = (title, list, labels, set) => `
-            <div class="filter-axis">
-                <span class="filter-axis-label">${title}</span>
-                <div class="filter-chips">
-                    ${list.map(k => `<button class="filter-chip${set.has(k) ? ' on' : ''}" data-set="${title}" data-k="${k}">${labels[k]}</button>`).join("")}
-                </div>
-            </div>`;
-        el.innerHTML =
-            axis("Catégorie", CAT_LIST, CAT_LABELS, filterState.cats) +
-            axis("Objectif", GOAL_LIST, GOAL_LABELS, filterState.goals) +
-            axis("Zone", ZONE_LIST, ZONE_LABELS, filterState.zones) +
-            axis("Matériel", EQUIP_LIST, EQUIP_LABELS, filterState.equip) +
-            axis("Latéralité", ["uni", "bi"], UNI_LABELS, filterState.uni);
 
-        el.querySelectorAll('.filter-chip').forEach(btn => {
-            btn.onclick = () => {
-                const map = { "Catégorie": filterState.cats, "Objectif": filterState.goals, "Zone": filterState.zones, "Matériel": filterState.equip, "Latéralité": filterState.uni };
-                const set = map[btn.dataset.set];
-                const k = btn.dataset.k;
-                if (set.has(k)) set.delete(k); else set.add(k);
-                btn.classList.toggle('on', set.has(k));
+        el.className = 'filter-bar';
+        el.innerHTML = FILTER_AXES.map(ax => {
+            const set = filterState[ax.key];
+            const n = set.size;
+            const opts = ax.list.map(k => `
+                <div class="filter-opt${set.has(k) ? ' sel' : ''}" data-axis="${ax.key}" data-k="${k}">
+                    <span class="check">${CHECK_SVG}</span>${ax.labels[k]}
+                </div>`).join("");
+            return `
+                <div class="filter-drop" data-axis="${ax.key}">
+                    <button class="filter-btn${n ? ' has-active' : ''}" type="button">
+                        ${ax.label}${n ? `<span class="count-badge">${n}</span>` : ''}
+                        <svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="filter-menu">${opts}</div>
+                </div>`;
+        }).join("");
+
+        // Ouverture/fermeture des menus
+        el.querySelectorAll('.filter-drop').forEach(drop => {
+            const btn = drop.querySelector('.filter-btn');
+            btn.onclick = (ev) => {
+                ev.stopPropagation();
+                const wasOpen = drop.classList.contains('open');
+                el.querySelectorAll('.filter-drop').forEach(d => d.classList.remove('open'));
+                if (!wasOpen) drop.classList.add('open');
+            };
+        });
+
+        // Sélection d'une option
+        el.querySelectorAll('.filter-opt').forEach(opt => {
+            opt.onclick = (ev) => {
+                ev.stopPropagation();
+                const axis = opt.dataset.axis, k = opt.dataset.k, set = filterState[axis];
+                if (axis === 'uni') { // choix unique
+                    const had = set.has(k);
+                    set.clear();
+                    if (!had) set.add(k);
+                } else {
+                    if (set.has(k)) set.delete(k); else set.add(k);
+                }
+                renderFilterPanel(containerId, filterState, onChange); // re-render pour badges + coches
+                // rouvre le menu qu'on vient d'utiliser
+                const reDrop = document.querySelector(`#${containerId} .filter-drop[data-axis="${axis}"]`);
+                if (reDrop) reDrop.classList.add('open');
                 onChange();
             };
         });
     }
+
+    // Ferme les menus de filtre si on clique ailleurs
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.filter-drop')) {
+            document.querySelectorAll('.filter-drop.open').forEach(d => d.classList.remove('open'));
+        }
+    });
 
     function filterActiveCount(f) {
         return f.cats.size + f.equip.size + f.zones.size + f.goals.size + f.uni.size;
@@ -1271,21 +1322,7 @@
     let openAddPanelId = null;
 
     function initCatChips() {
-        renderFilterPanel('cat-chips', builderFilter, () => { renderExerciseCatalog(); updateBuilderFilterLabel(); });
-        updateBuilderFilterLabel();
-    }
-
-    function toggleBuilderFilters() {
-        const el = document.getElementById('cat-chips');
-        el.style.display = el.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function updateBuilderFilterLabel() {
-        const btn = document.getElementById('builder-filter-toggle');
-        if (!btn) return;
-        const n = filterActiveCount(builderFilter);
-        btn.innerText = n ? `Filtres (${n})` : "Filtres";
-        btn.classList.toggle('primary', n > 0);
+        renderFilterPanel('cat-chips', builderFilter, renderExerciseCatalog);
     }
 
     function cleanName(n) { return n.replace(/^\d+\.\s*/, ''); }
