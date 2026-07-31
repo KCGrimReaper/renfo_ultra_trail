@@ -1029,9 +1029,12 @@
         autoBackup();
     }
 
+    let sessionDoneLock = false;
     function markSessionDone() {
+        if (sessionDoneLock) return;
         const s = getData(currentId);
         if (!s) return;
+        sessionDoneLock = true;
         const comp = computeComposition(s.ex);
         history.unshift({
             date: new Date().toISOString().slice(0, 10),
@@ -1040,8 +1043,9 @@
             comp: comp.counts
         });
         saveHistory();
-        const btn = document.getElementById('done-btn');
-        if (btn) { btn.innerText = "Séance enregistrée"; setTimeout(() => { btn.innerText = "Terminer la séance"; }, 2000); }
+        // Redirige vers l'accueil (évite les clics répétés sur Terminer)
+        goHome();
+        setTimeout(() => { sessionDoneLock = false; }, 1500);
     }
 
     // --- NAVIGATION DE BASE ---
@@ -1376,7 +1380,7 @@
                     <div class="add-panel-grid">
                         <div><label>Séries</label><input type="number" min="1" max="10" value="${def.series}" id="series-${e.id}" class="text-input"></div>
                         <div><label>Reps</label><input type="number" min="1" max="100" value="${def.reps}" id="reps-${e.id}" class="text-input"></div>
-                        ${hasMateriel ? `<div><label>Charge / détail</label><input type="text" placeholder="Ex : 2x5kg, élastique fort" id="detail-${e.id}" class="text-input"></div>` : ""}
+                        ${hasMateriel ? `<div><label>Charge / détail (optionnel)</label><input type="text" placeholder="Ex : 2x5kg, élastique fort" id="detail-${e.id}" class="text-input"></div>` : ""}
                     </div>
                     <button class="nav-btn" onclick="confirmAdd('${e.id}')">Ajouter à la séance</button>
                     <span id="add-status-${e.id}" style="font-weight:700; font-size:0.75rem; margin-left:10px; color:var(--wood);"></span>
@@ -1400,20 +1404,11 @@
         const series = +document.getElementById('series-' + id).value || 3;
         const reps = +document.getElementById('reps-' + id).value || 10;
         const dEl = document.getElementById('detail-' + id);
-        const hasMateriel = e.m && e.m.toLowerCase() !== "aucun";
-
-        // Matériel présent -> le détail de charge est obligatoire
-        if (hasMateriel && (!dEl || !dEl.value.trim())) {
-            const st = document.getElementById('add-status-' + id);
-            if (st) st.innerText = "Précise la charge ou le détail du matériel.";
-            return;
-        }
         const detail = dEl ? dEl.value.trim() : "";
 
         const entry = { ...e };
         entry.r = `${series}x${reps}`;
         if (detail) entry.m = `${e.m} · ${detail}`;
-        // Les paramètres saisis remplacent les variantes de reps par niveau
         delete entry.inter; delete entry.expert;
         currentBuilderList.push(entry);
 
@@ -2138,7 +2133,7 @@
 
     // --- PLAYER DE SÉANCE ---
     let playerIndex = 0;
-    let restTimer = null, restSecs = 0;
+    let restTimer = null, restEnd = null;
     let playerPhotoOn = true;
     let applyingPlayerRemote = false; // évite de repousser un état reçu
 
@@ -2146,7 +2141,7 @@
     function pushPlayerState(open) {
         if (applyingPlayerRemote) return;
         if (window.Cloud && window.Cloud.isSignedIn() && window.Cloud.pushPlayer) {
-            window.Cloud.pushPlayer({ open: open, sessionId: currentId, index: playerIndex, ts: Date.now() });
+            window.Cloud.pushPlayer({ open: open, sessionId: currentId, index: playerIndex, restEnd: restEnd || null, ts: Date.now() });
         }
     }
 
@@ -2157,7 +2152,6 @@
         try {
             const isOpen = document.getElementById('player').classList.contains('open');
             if (st.open) {
-                // Ouvre / met à jour le player pour refléter l'appareil distant
                 if (st.sessionId && st.sessionId !== currentId) currentId = st.sessionId;
                 const s = getData(currentId);
                 if (s && s.ex.length) {
@@ -2167,12 +2161,16 @@
                         applyPlayerBg();
                         document.getElementById('player').classList.add('open');
                     }
-                    stopRest();
                     renderPlayer();
+                    // Synchro du repos : heure de fin partagée
+                    if (st.restEnd && st.restEnd > Date.now()) {
+                        startRest(null, st.restEnd); // relance l'affichage à partir de l'heure de fin distante
+                    } else {
+                        stopLocalRestTick();
+                    }
                 }
             } else if (isOpen) {
-                // L'autre appareil a fermé la séance
-                stopRest();
+                stopLocalRestTick();
                 document.getElementById('player').classList.remove('open');
             }
         } finally {
@@ -2259,29 +2257,41 @@
         pushPlayerState(true);
     }
 
-    function startRest(secs) {
-        stopRest();
-        restSecs = secs;
+    // Timer de repos basé sur une heure de fin (permet la synchro sans dérive)
+    function startRest(secs, remoteEnd) {
+        stopLocalRestTick();
+        restEnd = remoteEnd || (Date.now() + secs * 1000);
         const el = document.getElementById('player-rest');
         el.classList.add('on');
         document.getElementById('rest-stop').style.display = 'inline-block';
         const tick = () => {
-            const m = Math.floor(restSecs / 60), sc = restSecs % 60;
+            const remaining = Math.max(0, Math.round((restEnd - Date.now()) / 1000));
+            const m = Math.floor(remaining / 60), sc = remaining % 60;
             el.innerText = `${m < 10 ? '0' + m : m}:${sc < 10 ? '0' + sc : sc}`;
-            if (restSecs <= 0) { stopRest(); return; }
-            restSecs--;
+            if (remaining <= 0) { stopRest(); return; }
         };
         tick();
-        restTimer = setInterval(tick, 1000);
+        restTimer = setInterval(tick, 250);
+        // Pousse l'état de repos aux autres appareils (sauf si on applique déjà un état distant)
+        if (!remoteEnd) pushPlayerState(true);
     }
 
-    function stopRest() {
+    // Arrête juste l'affichage local (sans notifier le cloud)
+    function stopLocalRestTick() {
         clearInterval(restTimer);
         restTimer = null;
+        restEnd = null;
         const el = document.getElementById('player-rest');
         if (el) el.classList.remove('on');
         const st = document.getElementById('rest-stop');
         if (st) st.style.display = 'none';
+    }
+
+    function stopRest() {
+        const wasRunning = !!restTimer;
+        stopLocalRestTick();
+        // Notifie les autres appareils que le repos est terminé
+        if (wasRunning && !applyingPlayerRemote) pushPlayerState(true);
     }
 
     document.addEventListener('keydown', (e) => {
