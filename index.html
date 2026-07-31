@@ -213,21 +213,30 @@
         .view-btn.active svg { stroke: #fff; }
 
         /* --- LISTE D'EXERCICES : 3 MODES --- */
-        /* Mode liste : lignes uniformes cliquables */
-        .exm-list .exm-item { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background 0.15s; background: var(--card); }
+        /* Mode LISTE : lignes aérées avec la zone en sous-titre */
+        .exm-list .exm-item { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background 0.15s; background: var(--card); }
         .exm-list .exm-item:last-child { border-bottom: none; }
         .exm-list .exm-item:hover { background: var(--bg); }
-        .exm-list .exm-item .exm-name { font-weight: 800; color: var(--ink); flex-shrink: 0; }
-        .exm-list .exm-item .exm-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
+        .exm-list .exm-item .exm-main { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+        .exm-list .exm-item .exm-name { font-weight: 800; color: var(--ink); }
+        .exm-list .exm-item .exm-sub { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+        .exm-list .exm-item .exm-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; flex-shrink: 0; }
         .exm-list .exm-item .chevron { width: 16px; height: 16px; stroke: var(--stone); fill: none; stroke-width: 2.2; flex-shrink: 0; }
 
-        /* Mode compact : très dense, une ligne fine */
-        .exm-list.compact .exm-item { padding: 8px 16px; }
-        .exm-list.compact .exm-item .exm-name { font-size: 0.85rem; }
+        /* Mode COMPACT : mini-lignes tableur ultra-denses */
+        .exm-list.compact { display: block; }
+        .exm-list.compact .exm-item { padding: 6px 14px; gap: 8px; border-bottom: 1px solid var(--line); }
+        .exm-list.compact .exm-item .exm-sub { display: none; }
+        .exm-list.compact .exm-item .exm-name { font-size: 0.82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .exm-list.compact .exm-item .exm-tags { gap: 3px; }
+        .exm-list.compact .exm-item .cat-tag { font-size: 0.58rem; padding: 1px 6px; }
+        .exm-list.compact .exm-item .chevron { display: none; }
 
-        /* Mode grille : cartes */
-        .exm-list.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-        .exm-list.grid .exm-item { flex-direction: column; align-items: flex-start; gap: 8px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-height: 88px; }
+        /* Mode GRILLE : cartes */
+        .exm-list.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; background: transparent; }
+        .exm-list.grid .exm-item { flex-direction: column; align-items: flex-start; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-height: 92px; background: var(--card); }
+        .exm-list.grid .exm-item .exm-main { gap: 6px; }
+        .exm-list.grid .exm-item .exm-sub { display: block; }
         .exm-list.grid .exm-item .exm-tags { margin-left: 0; }
         .exm-list.grid .exm-item .chevron { display: none; }
         .exm-list.grid .exm-item .exm-name { white-space: normal; }
@@ -860,8 +869,8 @@
     // === ATTRIBUTS ÉTENDUS (matériel, zone, latéralité, objectif) ===
     const EQUIP_LABELS = { aucun: "Aucun", elastique: "Élastique", halteres: "Haltères", box: "Box", coussin: "Coussin", roulette: "Roulette", tapis: "Tapis", obstacle: "Obstacle" };
     const EQUIP_LIST = ["aucun", "elastique", "halteres", "box", "coussin", "roulette", "tapis", "obstacle"];
-    const ZONE_LABELS = { quadriceps: "Quadriceps", fessiers: "Fessiers", ischios: "Ischios", mollets: "Mollets/Chevilles", tronc: "Tronc/Gainage", hanches: "Hanches" };
-    const ZONE_LIST = ["quadriceps", "fessiers", "ischios", "mollets", "tronc", "hanches"];
+    const ZONE_LABELS = { quadriceps: "Quadriceps", fessiers: "Fessiers", ischios: "Ischios", mollets: "Mollets/Chevilles", tronc: "Tronc/Gainage", hanches: "Hanches", pectoraux: "Pectoraux", epaules: "Épaules", dos: "Dos", bras: "Bras" };
+    const ZONE_LIST = ["quadriceps", "fessiers", "ischios", "mollets", "tronc", "hanches", "pectoraux", "epaules", "dos", "bras"];
     const GOAL_LABELS = { montee: "Montée", descente: "Descente", prevention: "Prévention", stabilite: "Stabilité" };
     const GOAL_LIST = ["montee", "descente", "prevention", "stabilite"];
     const UNI_LABELS = { uni: "Unilatéral", bi: "Bilatéral" };
@@ -1677,13 +1686,19 @@
         }
 
         const chevron = `<svg class="chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
-        listEl.innerHTML = filtered.map(e => `
+        listEl.innerHTML = filtered.map(e => {
+            const a = getAttrs(e);
+            const zones = a.zones.map(z => ZONE_LABELS[z]).join(", ");
+            return `
             <div class="exm-item" onclick="openExerciseDetail('${e.id}')">
-                <span class="exm-name">${cleanName(e.n)}</span>
+                <div class="exm-main">
+                    <span class="exm-name">${cleanName(e.n)}</span>
+                    ${zones ? `<span class="exm-sub">${zones}</span>` : ""}
+                </div>
                 <span class="exm-tags">${catTagsHtml(e)}</span>
                 ${chevron}
-            </div>
-        `).join("");
+            </div>`;
+        }).join("");
     }
 
     // Bottom sheet de détail d'un exercice
