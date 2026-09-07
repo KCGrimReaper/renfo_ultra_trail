@@ -1,4 +1,4 @@
-const CACHE_NAME = 'renfo-ultra-trail-v14';
+const CACHE_NAME = 'renfo-ultra-trail-v15';
 const APP_SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -43,7 +43,10 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
       return fetch(event.request).then((response) => {
-        if (response.ok && event.request.url.startsWith(self.location.origin)) {
+        // Cache : ressources de l'app (même origine) ET images externes (ambiances postimg, etc.)
+        const isImage = event.request.destination === 'image' || /\.(png|jpe?g|webp|gif|svg)$/i.test(event.request.url);
+        const sameOrigin = event.request.url.startsWith(self.location.origin);
+        if (response.ok && (sameOrigin || isImage)) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
         }

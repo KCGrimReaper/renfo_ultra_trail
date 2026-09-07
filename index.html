@@ -338,10 +338,10 @@
         #player.open { display: flex; }
 
         /* Panneau liste des exercices */
-        .player-sidebar { width: 300px; flex-shrink: 0; background: rgba(20,17,14,0.55); backdrop-filter: blur(8px); border-right: 1px solid rgba(255,255,255,0.12); display: flex; flex-direction: column; }
-        .player-sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 14px; font-weight: 900; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; color: rgba(255,255,255,0.7); }
-        .player-sidebar-head .player-icon-btn { display: none; } /* croix visible seulement en mobile */
-        .player-sidebar-list { flex-grow: 1; overflow-y: auto; padding: 0 12px 20px; }
+        .player-sidebar { width: 300px; flex-shrink: 0; background: rgba(20,17,14,0.55); backdrop-filter: blur(8px); border-right: 1px solid rgba(255,255,255,0.12); display: flex; flex-direction: column; overflow: hidden; transition: width 0.25s ease; }
+        #player.list-collapsed .player-sidebar { width: 0; border-right: none; }
+        .player-sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 14px; font-weight: 900; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+        .player-sidebar-list { flex-grow: 1; overflow-y: auto; padding: 0 12px 20px; min-width: 276px; }
         .sidebar-ex { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; cursor: pointer; margin-bottom: 4px; transition: 0.15s; }
         .sidebar-ex:hover { background: rgba(255,255,255,0.08); }
         .sidebar-ex .se-num { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
@@ -359,7 +359,6 @@
         .player-main { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); }
 
         .player-top { display: flex; align-items: center; gap: 14px; }
-        .player-top .list-toggle { display: none; } /* visible seulement en mobile */
         .player-progress { flex-grow: 1; height: 4px; background: rgba(255,255,255,0.18); border-radius: 2px; overflow: hidden; }
         .player-progress-fill { height: 100%; background: var(--sand); border-radius: 2px; transition: width 0.3s; }
         .player-counter { font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px; color: rgba(255,255,255,0.7); white-space: nowrap; }
@@ -383,9 +382,8 @@
         /* Mobile : la sidebar devient un panneau qui glisse par-dessus */
         @media (max-width: 800px) {
             .player-sidebar { position: absolute; inset: 0 auto 0 0; width: 82%; max-width: 320px; transform: translateX(-100%); transition: transform 0.25s ease; z-index: 10; background: rgba(20,17,14,0.92); }
+            #player.list-collapsed .player-sidebar { width: 82%; } /* la largeur ne compte pas en overlay */
             #player.list-open .player-sidebar { transform: translateX(0); }
-            .player-sidebar-head .player-icon-btn { display: flex; }
-            .player-top .list-toggle { display: flex; }
         }
 
         .player-rest-zone { min-height: 70px; display: flex; align-items: center; justify-content: center; }
@@ -1201,6 +1199,14 @@
     };
     let currentAmbiance = localStorage.getItem('ultraAmbiance') || 'chalet';
     if (!AMBIANCES[currentAmbiance]) currentAmbiance = 'chalet';
+
+    // Précharge les images d'ambiance en mémoire pour un affichage instantané ensuite
+    function preloadAmbiances() {
+        Object.keys(AMBIANCES).forEach(id => {
+            const url = AMBIANCES[id].url;
+            if (url) { const img = new Image(); img.src = url; }
+        });
+    }
 
     function ambianceUrl() {
         const a = AMBIANCES[currentAmbiance];
@@ -2524,12 +2530,17 @@
         playerIndex = i;
         renderPlayer();
         pushPlayerState(true);
-        // Sur mobile, referme le panneau après sélection
+        // Sur mobile, referme le panneau glissant après sélection
         document.getElementById('player').classList.remove('list-open');
     }
 
     function togglePlayerList() {
-        document.getElementById('player').classList.toggle('list-open');
+        const p = document.getElementById('player');
+        if (window.matchMedia('(max-width: 800px)').matches) {
+            p.classList.toggle('list-open');
+        } else {
+            p.classList.toggle('list-collapsed');
+        }
     }
 
     function playerNext() {
@@ -2714,6 +2725,7 @@
     renderTemplates();
     restoreBackupHandle();
     setAmbiance(currentAmbiance);
+    preloadAmbiances();
 
     // Exposition pour le module Firebase (chargé ensuite en type=module)
     window.applyCloudState = applyCloudState;
