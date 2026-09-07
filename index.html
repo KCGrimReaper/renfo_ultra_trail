@@ -379,10 +379,10 @@
         .player-sub { font-size: 1.05rem; line-height: 1.5; color: rgba(255,255,255,0.82); max-width: 480px; }
         .player-materiel { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: rgba(255,255,255,0.55); }
 
-        /* Mobile : la sidebar devient un panneau qui glisse par-dessus */
+        /* Mobile : même comportement (repli latéral), juste un peu plus étroite */
         @media (max-width: 800px) {
-            .player-sidebar { position: absolute; inset: 0 auto 0 0; width: 82%; max-width: 320px; transform: translateX(0); transition: transform 0.25s ease; z-index: 10; background: rgba(20,17,14,0.94); }
-            #player.list-hidden .player-sidebar { width: 82%; transform: translateX(-100%); border-right: none; }
+            .player-sidebar { width: 240px; }
+            .player-sidebar-list { min-width: 216px; }
         }
 
         .player-rest-zone { min-height: 70px; display: flex; align-items: center; justify-content: center; }
@@ -747,7 +747,7 @@
     <div id="nex-status" style="font-weight:700; font-size:0.8rem; margin-top:8px;"></div>
 </div>
 
-<div id="player" class="list-hidden">
+<div id="player">
     <div class="player-sidebar" id="player-sidebar">
         <div class="player-sidebar-head">
             <span>Séance</span>
@@ -2447,12 +2447,10 @@
         const s = getData(currentId);
         if (!s || !s.ex.length) return;
         playerIndex = 0;
-        playerPhotoOn = !!playerPhotoUrl(); // photo si une existe (indépendant de l'ambiance neutre)
+        playerPhotoOn = !!playerPhotoUrl();
         applyPlayerBg();
         const p = document.getElementById('player');
-        // Barre liste visible d'emblée sur desktop, masquée sur mobile
-        if (window.matchMedia('(max-width: 800px)').matches) p.classList.add('list-hidden');
-        else p.classList.remove('list-hidden');
+        p.classList.remove('list-hidden'); // barre visible à l'ouverture
         p.classList.add('open');
         renderPlayer();
         pushPlayerState(true);
@@ -2533,10 +2531,6 @@
         playerIndex = i;
         renderPlayer();
         pushPlayerState(true);
-        // Sur mobile, referme le panneau glissant après sélection
-        if (window.matchMedia('(max-width: 800px)').matches) {
-            document.getElementById('player').classList.add('list-hidden');
-        }
     }
 
     function togglePlayerList() {
