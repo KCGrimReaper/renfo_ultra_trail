@@ -311,6 +311,25 @@
         /* --- CALENDRIER : jour courant + séances faites --- */
         .cal-day.today { border: 2px solid var(--ink); background: #fff; }
         .cal-day.today .day-num { color: var(--ink); }
+
+        /* --- VUE AGENDA (liste, idéale mobile) --- */
+        .cal-nav { padding: 8px 14px; }
+        #cal-agenda { display: none; }
+        .agenda-item { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+        .agenda-item:last-child { border-bottom: none; }
+        .agenda-item:hover { background: var(--bg); }
+        .agenda-date { flex-shrink: 0; width: 52px; text-align: center; }
+        .agenda-date .ad-day { font-size: 1.5rem; font-weight: 900; color: var(--ink); line-height: 1; }
+        .agenda-date .ad-dow { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; }
+        .agenda-item.is-today .agenda-date .ad-day { color: var(--wood); }
+        .agenda-info { flex-grow: 1; min-width: 0; }
+        .agenda-info .ai-plan { font-weight: 800; color: var(--ink); }
+        .agenda-info .ai-done { font-size: 0.8rem; color: var(--stone); font-weight: 700; margin-top: 3px; }
+        .agenda-chevron { width: 16px; height: 16px; stroke: var(--stone); fill: none; stroke-width: 2.2; flex-shrink: 0; }
+        .agenda-empty { text-align: center; color: var(--muted); font-weight: 600; padding: 30px 20px; }
+        .agenda-today-line { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; }
+        .agenda-today-line::before, .agenda-today-line::after { content: ""; flex-grow: 1; height: 1px; background: var(--line); }
+        .agenda-today-line span { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; color: var(--wood); letter-spacing: 1px; }
         .done-badge { background: #fff; color: var(--wood); border: 1px solid var(--wood); font-size: 0.6rem; font-weight: bold; padding: 3px 4px; border-radius: 4px; text-transform: uppercase; text-align: center; word-break: break-word; line-height: 1.2; margin-top: 3px; }
 
         /* --- PLAYER DE SÉANCE --- */
@@ -329,6 +348,16 @@
         .player-icon-btn.big svg { width: 26px; height: 26px; }
 
         .player-body { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 10px; overflow-y: auto; padding: 20px 0; }
+
+        /* Frise de progression : tous les exercices, position actuelle */
+        .player-steps { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 340px; margin-bottom: 4px; }
+        .player-steps .step-dot { width: 22px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.22); cursor: pointer; transition: 0.2s; padding: 0; border: none; }
+        .player-steps .step-dot.done { background: rgba(255,255,255,0.5); }
+        .player-steps .step-dot.current { background: var(--sand); width: 34px; }
+
+        /* Aperçu de l'exercice suivant */
+        .player-next-preview { margin-top: 8px; font-size: 0.82rem; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; min-height: 20px; }
+        .player-next-preview b { color: rgba(255,255,255,0.9); font-weight: 800; }
         .player-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
         .player-body h2 { margin: 6px 0 0; font-size: 2.1rem; text-transform: uppercase; font-weight: 900; line-height: 1.1; }
         .player-reps { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--sand); letter-spacing: 1px; }
@@ -408,18 +437,26 @@
 
     <div id="calendar-screen" class="screen">
         <div class="card">
-            <div class="header-box">
+            <div class="header-box" style="margin-bottom:12px;">
                 <h1 class="screen-title">Mon Planning</h1>
-            </div>
-            
-            <div class="cal-header-bar">
-                <button class="nav-btn" onclick="changeMonth(-1)">❮ Mois préc.</button>
-                <h3 id="cal-month-title" style="margin:0; text-transform:uppercase; font-weight:900;"></h3>
-                <button class="nav-btn" onclick="changeMonth(1)">Mois suiv. ❯</button>
+                <div class="view-switch" id="cal-view-switch">
+                    <button class="view-btn" data-calview="agenda" onclick="setCalView('agenda')" aria-label="Agenda">
+                        <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                    </button>
+                    <button class="view-btn" data-calview="month" onclick="setCalView('month')" aria-label="Mois">
+                        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+                    </button>
+                </div>
             </div>
 
-            <div class="cal-grid" id="cal-grid">
-                </div>
+            <div class="cal-header-bar">
+                <button class="nav-btn cal-nav" onclick="changeMonth(-1)" aria-label="Précédent">❮</button>
+                <h3 id="cal-month-title" style="margin:0; text-transform:uppercase; font-weight:900; text-align:center; flex-grow:1;"></h3>
+                <button class="nav-btn cal-nav" onclick="changeMonth(1)" aria-label="Suivant">❯</button>
+            </div>
+
+            <div class="cal-grid" id="cal-grid"></div>
+            <div id="cal-agenda"></div>
         </div>
     </div>
 
@@ -701,6 +738,7 @@
         <span class="player-counter" id="player-counter"></span>
     </div>
     <div class="player-body">
+        <div class="player-steps" id="player-steps"></div>
         <div id="player-tags" class="player-tags"></div>
         <h2 id="player-name"></h2>
         <div class="player-reps" id="player-reps"></div>
@@ -710,6 +748,8 @@
         <div class="player-rest-zone" id="player-rest-zone">
             <div class="player-rest" id="player-rest">00:00</div>
         </div>
+
+        <div class="player-next-preview" id="player-next-preview"></div>
     </div>
     <div class="player-bottom">
         <div class="player-rest-inline" id="player-rest-inline">
@@ -1194,51 +1234,117 @@
     let calDate = new Date();
     let plannedData = JSON.parse(localStorage.getItem('ultraPlan')) || {};
 
-    function initCalendar() { renderCalendar(); }
+    function initCalendar() {
+        // Défaut : agenda sur mobile, mois sur desktop (au premier passage)
+        if (!localStorage.getItem('ultraCalView')) {
+            calView = window.matchMedia('(max-width: 700px)').matches ? 'agenda' : 'month';
+        }
+        renderCalendar();
+    }
 
-    function changeMonth(offset) {
-        calDate.setMonth(calDate.getMonth() + offset);
+    let calView = localStorage.getItem('ultraCalView') || 'month';
+
+    function setCalView(v) {
+        calView = v;
+        localStorage.setItem('ultraCalView', v);
         renderCalendar();
     }
 
     function renderCalendar() {
+        // Sélecteur actif
+        document.querySelectorAll('#cal-view-switch .view-btn').forEach(b => b.classList.toggle('active', b.dataset.calview === calView));
+        const grid = document.getElementById('cal-grid');
+        const agenda = document.getElementById('cal-agenda');
+
+        document.getElementById('cal-month-title').innerText = calDate.toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'});
+
+        if (calView === 'agenda') {
+            grid.style.display = 'none';
+            agenda.style.display = 'block';
+            renderAgenda();
+        } else {
+            grid.style.display = 'grid';
+            agenda.style.display = 'none';
+            renderMonthGrid();
+        }
+    }
+
+    function renderMonthGrid() {
         const grid = document.getElementById('cal-grid');
         grid.innerHTML = "";
         const year = calDate.getFullYear();
         const month = calDate.getMonth();
 
-        document.getElementById('cal-month-title').innerText = calDate.toLocaleDateString('fr-FR', {month: 'long', year: 'numeric'});
-
         const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
         days.forEach(d => { grid.innerHTML += `<div class="cal-day-name">${d}</div>`; });
 
         let firstDay = new Date(year, month, 1).getDay();
-        let startOffset = firstDay === 0 ? 6 : firstDay - 1; // Ajustement Lundi = 1er jour
+        let startOffset = firstDay === 0 ? 6 : firstDay - 1;
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
         for(let i=0; i<startOffset; i++) { grid.innerHTML += `<div class="cal-day empty"></div>`; }
 
         const todayStr = new Date().toISOString().slice(0, 10);
-        // Regroupement de l'historique par date pour affichage
         let doneByDate = {};
         history.forEach(h => { (doneByDate[h.date] = doneByDate[h.date] || []).push(h); });
 
         for(let i=1; i<=daysInMonth; i++) {
             let dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             let plan = plannedData[dateStr];
-            
             let badgeHtml = "";
             if(plan && getData(plan.id)) {
                 badgeHtml = `<div class="plan-badge">${getData(plan.id).t}</div>`;
             }
-
             let doneHtml = (doneByDate[dateStr] || []).map(h =>
                 `<div class="done-badge">Fait · ${h.title}</div>`
             ).join("");
-
             let todayClass = dateStr === todayStr ? " today" : "";
             grid.innerHTML += `<div class="cal-day${todayClass}" onclick="openPlanModal('${dateStr}', ${i})"><span class="day-num">${i}</span>${badgeHtml}${doneHtml}</div>`;
         }
+    }
+
+    function renderAgenda() {
+        const agenda = document.getElementById('cal-agenda');
+        const year = calDate.getFullYear();
+        const month = calDate.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const dow = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+        let doneByDate = {};
+        history.forEach(h => { (doneByDate[h.date] = doneByDate[h.date] || []).push(h); });
+
+        let rows = "";
+        let todayInserted = false;
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+            const plan = plannedData[dateStr];
+            const planValid = plan && getData(plan.id);
+            const done = doneByDate[dateStr] || [];
+            if (!planValid && done.length === 0) continue; // agenda = seulement les jours avec qqch
+
+            const d = new Date(year, month, i);
+            const isToday = dateStr === todayStr;
+            const planHtml = planValid ? `<div class="ai-plan">${getData(plan.id).t}</div>` : "";
+            const doneHtml = done.map(h => `<div class="ai-done">✓ Fait · ${h.title}</div>`).join("");
+
+            rows += `
+                <div class="agenda-item${isToday ? ' is-today' : ''}" onclick="openPlanModal('${dateStr}', ${i})">
+                    <div class="agenda-date">
+                        <div class="ad-day">${i}</div>
+                        <div class="ad-dow">${dow[d.getDay()]}</div>
+                    </div>
+                    <div class="agenda-info">${planHtml}${doneHtml}</div>
+                    <svg class="agenda-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+                </div>`;
+        }
+
+        agenda.innerHTML = rows || `<div class="agenda-empty">Aucune séance planifiée ni réalisée ce mois-ci.<br>Touche un jour dans la vue Mois pour planifier.</div>`;
+    }
+
+    function changeMonth(offset) {
+        calDate.setMonth(calDate.getMonth() + offset);
+        renderCalendar();
     }
 
     function openPlanModal(dateStr, dayNum) {
@@ -2343,6 +2449,36 @@
         document.getElementById('player-materiel').innerText = e.m && e.m.toLowerCase() !== "aucun" ? e.m : "";
         document.getElementById('player-consigne').innerText = e.c || "";
         document.getElementById('player-next-btn').innerText = (playerIndex === total - 1) ? "Terminer" : "Suivant";
+
+        // Frise de progression : un point par exercice, cliquable
+        const steps = document.getElementById('player-steps');
+        if (steps) {
+            steps.innerHTML = s.ex.map((ex, i) => {
+                const cls = i === playerIndex ? 'current' : (i < playerIndex ? 'done' : '');
+                return `<button class="step-dot ${cls}" onclick="playerGoTo(${i})" aria-label="Exercice ${i + 1}: ${cleanName(ex.n)}" title="${cleanName(ex.n)}"></button>`;
+            }).join("");
+        }
+
+        // Aperçu de l'exercice suivant
+        const preview = document.getElementById('player-next-preview');
+        if (preview) {
+            if (playerIndex < total - 1) {
+                const nx = s.ex[playerIndex + 1];
+                preview.innerHTML = `Suivant : <b>${cleanName(nx.n)}</b> · ${nx.r || ""}`;
+            } else {
+                preview.innerHTML = `Dernier exercice`;
+            }
+        }
+    }
+
+    // Navigation directe vers un exercice via la frise
+    function playerGoTo(i) {
+        const s = getData(currentId);
+        if (!s || i < 0 || i >= s.ex.length) return;
+        stopRest();
+        playerIndex = i;
+        renderPlayer();
+        pushPlayerState(true);
     }
 
     function playerNext() {
