@@ -344,14 +344,15 @@
         #player.open { display: flex; }
 
         /* Panneau liste des exercices (desktop : visible, rétractable) */
-        .player-sidebar { width: 300px; flex-shrink: 0; background: rgba(20,17,14,0.55); backdrop-filter: blur(8px); border-right: 1px solid rgba(255,255,255,0.12); display: flex; flex-direction: column; overflow: hidden; transition: width 0.25s ease; }
-        #player.list-hidden .player-sidebar { width: 0; border-right: none; }
+        /* Barre liste : pilotée par la classe .list-open sur #player (présente = ouverte) */
+        .player-sidebar { width: 0; flex-shrink: 0; background: rgba(20,17,14,0.55); backdrop-filter: blur(8px); border-right: none; display: flex; flex-direction: column; overflow: hidden; transition: width 0.25s ease; }
+        #player.list-open .player-sidebar { width: 300px; border-right: 1px solid rgba(255,255,255,0.12); }
 
-        /* Languette de repli du volet : suit le bord du volet */
-        .sidebar-tab { position: absolute; top: 50%; left: 300px; transform: translateY(-50%); z-index: 20; width: 26px; height: 60px; border: none; border-radius: 0 10px 10px 0; background: rgba(20,17,14,0.85); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; transition: left 0.25s ease; }
-        .sidebar-tab svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.25s ease; }
-        #player.list-hidden .sidebar-tab { left: 0; }
-        #player.list-hidden .sidebar-tab svg { transform: rotate(180deg); }
+        /* Languette : au bord du volet, suit son ouverture. Flèche gauche = fermer, droite = ouvrir */
+        .sidebar-tab { position: absolute; top: 50%; left: 0; transform: translateY(-50%); z-index: 20; width: 26px; height: 60px; border: none; border-radius: 0 10px 10px 0; background: rgba(20,17,14,0.85); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; transition: left 0.25s ease; }
+        .sidebar-tab svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.25s ease; transform: rotate(180deg); }
+        #player.list-open .sidebar-tab { left: 300px; }
+        #player.list-open .sidebar-tab svg { transform: rotate(0deg); }
         .player-sidebar-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 14px; font-weight: 900; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; color: rgba(255,255,255,0.7); white-space: nowrap; }
         .player-sidebar-list { flex-grow: 1; overflow-y: auto; padding: 0 12px 20px; width: 300px; box-sizing: border-box; }
         .sidebar-ex { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; cursor: pointer; margin-bottom: 4px; transition: 0.15s; }
@@ -391,12 +392,14 @@
         .player-sub { font-size: 1.05rem; line-height: 1.5; color: rgba(255,255,255,0.82); max-width: 480px; }
         .player-materiel { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: rgba(255,255,255,0.55); }
 
-        /* Mobile : même comportement (repli latéral), juste un peu plus étroite */
+        /* Mobile : barre EN SUPERPOSITION (ne pousse pas le contenu), même pilotage par .list-open */
         @media (max-width: 800px) {
-            .player-sidebar { width: 240px; }
-            .player-sidebar-list { width: 240px; }
-            .sidebar-tab { left: 240px; }
-            #player.list-hidden .sidebar-tab { left: 0; }
+            .player-sidebar { position: absolute; top: 0; bottom: 0; left: 0; width: 82%; max-width: 300px; z-index: 15; background: rgba(20,17,14,0.96); transform: translateX(-100%); transition: transform 0.25s ease; }
+            #player.list-open .player-sidebar { width: 82%; transform: translateX(0); border-right: 1px solid rgba(255,255,255,0.12); }
+            .player-sidebar-list { width: 100%; }
+            .sidebar-tab { left: 0; }
+            #player.list-open .sidebar-tab { left: 82%; }
+            .player-main { width: 100%; }
         }
 
         .player-rest-zone { min-height: 70px; display: flex; align-items: center; justify-content: center; }
@@ -2560,7 +2563,9 @@
         playerPhotoOn = !!playerPhotoUrl();
         applyPlayerBg();
         const p = document.getElementById('player');
-        p.classList.remove('list-hidden'); // barre visible à l'ouverture
+        // Barre ouverte d'emblée sur desktop, fermée sur mobile (overlay encombrant)
+        if (window.matchMedia('(max-width: 800px)').matches) p.classList.remove('list-open');
+        else p.classList.add('list-open');
         p.classList.add('open');
         renderPlayer();
         pushPlayerState(true);
@@ -2640,10 +2645,14 @@
         playerIndex = i;
         renderPlayer();
         pushPlayerState(true);
+        // Sur mobile, referme la barre (overlay) après sélection
+        if (window.matchMedia('(max-width: 800px)').matches) {
+            document.getElementById('player').classList.remove('list-open');
+        }
     }
 
     function togglePlayerList() {
-        document.getElementById('player').classList.toggle('list-hidden');
+        document.getElementById('player').classList.toggle('list-open');
     }
 
     function playerNext() {
