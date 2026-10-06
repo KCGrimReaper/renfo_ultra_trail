@@ -302,6 +302,12 @@
         .stat-chip { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 14px; }
         .stat-chip .stat-num { font-size: 1.3rem; font-weight: 900; line-height: 1; }
         .stat-chip .stat-label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--sand); margin-top: 3px; }
+        .trend { font-size: 0.75rem; font-weight: 800; margin-left: 2px; }
+        .trend.up { color: #7dc67d; }
+        .trend.down { color: #d98a7a; }
+        .trend.flat { color: var(--sand); }
+        .fav-count { margin-left: auto; font-weight: 900; color: var(--wood); font-size: 0.85rem; }
+        .freq-badge { font-size: 0.8rem; }
         .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .quick-btn { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; font-weight: 800; text-transform: uppercase; font-size: 0.65rem; color: var(--ink); transition: 0.2s; letter-spacing: 0.5px; }
         .quick-btn:hover { background: var(--ink); color: #fff; transform: translateY(-2px); }
@@ -1187,7 +1193,8 @@
             date: new Date().toISOString().slice(0, 10),
             id: currentId,
             title: s.t,
-            comp: comp.counts
+            comp: comp.counts,
+            exos: s.ex.map(e => ({ id: e.id, n: cleanName(e.n) }))
         });
         saveHistory();
         // Redirige vers l'accueil (évite les clics répétés sur Terminer)
@@ -1842,10 +1849,11 @@
         listEl.innerHTML = filtered.map(e => {
             const a = getAttrs(e);
             const zones = a.zones.map(z => ZONE_LABELS[z]).join(", ");
+            const freq = isFrequentExercise(e.id) ? `<span class="freq-badge" title="Souvent utilisé">🔥</span>` : "";
             return `
             <div class="exm-item" onclick="openExerciseDetail('${e.id}')">
                 <div class="exm-main">
-                    <span class="exm-name">${cleanName(e.n)}</span>
+                    <span class="exm-name">${cleanName(e.n)} ${freq}</span>
                     ${zones ? `<span class="exm-sub">${zones}</span>` : ""}
                 </div>
                 <span class="exm-tags">${catTagsHtml(e)}</span>
@@ -2120,17 +2128,80 @@
         return { start, end };
     }
 
+    // === STATS ===
+    // Série de semaines consécutives avec au moins une séance (incluant la semaine en cours si active)
+    function computeStreak() {
+        if (history.length === 0) return 0;
+        const weekKey = (dt) => {
+            const { start } = weekBounds(dt);
+            return start.toISOString().slice(0, 10);
+        };
+        const weeksWithSession = new Set(history.map(h => weekKey(new Date(h.date + 'T12:00:00'))));
+        let streak = 0;
+        let cursor = new Date();
+        // Si la semaine en cours n'a pas de séance, on démarre le compte à la semaine précédente
+        if (!weeksWithSession.has(weekKey(cursor))) cursor.setDate(cursor.getDate() - 7);
+        while (weeksWithSession.has(weekKey(cursor))) {
+            streak++;
+            cursor.setDate(cursor.getDate() - 7);
+        }
+        return streak;
+    }
+
+    // Comptage d'usage de chaque exercice (sur l'historique enrichi)
+    function exerciseUsageCounts() {
+        const counts = {};
+        history.forEach(h => {
+            (h.exos || []).forEach(e => {
+                if (!e.id) return;
+                counts[e.id] = counts[e.id] || { n: e.n, count: 0 };
+                counts[e.id].count++;
+            });
+        });
+        return counts;
+    }
+
+    // Top N exercices favoris
+    function topExercises(n) {
+        const counts = exerciseUsageCounts();
+        return Object.keys(counts)
+            .map(id => ({ id, ...counts[id] }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, n);
+    }
+
+    // Seuil "souvent utilisé" pour le badge (dynamique : au moins 3 usages)
+    function isFrequentExercise(id) {
+        const counts = exerciseUsageCounts();
+        return counts[id] && counts[id].count >= 3;
+    }
+
     function renderHome() {
         const d = new Date();
         document.getElementById('home-date').innerText = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-        // Stats : cette semaine, ce mois, total
+        // Stats : semaine, mois (+ tendance), streak
         const { start, end } = weekBounds(d);
         const thisWeek = history.filter(h => { const hd = new Date(h.date + 'T12:00:00'); return hd >= start && hd < end; }).length;
-        const thisMonth = history.filter(h => h.date.slice(0, 7) === d.toISOString().slice(0, 7)).length;
+        const thisMonthKey = d.toISOString().slice(0, 7);
+        const thisMonth = history.filter(h => h.date.slice(0, 7) === thisMonthKey).length;
+        // Mois dernier
+        const lastMonthDate = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+        const lastMonthKey = lastMonthDate.toISOString().slice(0, 7);
+        const lastMonth = history.filter(h => h.date.slice(0, 7) === lastMonthKey).length;
+        // Tendance mois vs mois dernier
+        let trend = "";
+        if (lastMonth > 0 || thisMonth > 0) {
+            if (thisMonth > lastMonth) trend = `<span class="trend up">▲ ${thisMonth - lastMonth}</span>`;
+            else if (thisMonth < lastMonth) trend = `<span class="trend down">▼ ${lastMonth - thisMonth}</span>`;
+            else trend = `<span class="trend flat">=</span>`;
+        }
+        const streak = computeStreak();
+
         document.getElementById('home-stats').innerHTML = `
             <div class="stat-chip"><div class="stat-num">${thisWeek}</div><div class="stat-label">Cette semaine</div></div>
-            <div class="stat-chip"><div class="stat-num">${thisMonth}</div><div class="stat-label">Ce mois</div></div>
+            <div class="stat-chip"><div class="stat-num">${thisMonth} ${trend}</div><div class="stat-label">Ce mois</div></div>
+            <div class="stat-chip"><div class="stat-num">${streak}</div><div class="stat-label">Série (sem.)</div></div>
             <div class="stat-chip"><div class="stat-num">${history.length}</div><div class="stat-label">Au total</div></div>`;
 
         // Séance du jour
@@ -2156,17 +2227,51 @@
         html += `</div>`;
         box.innerHTML = html;
 
-        // Activité récente
+        // Activité récente + stats
         const recentBox = document.getElementById('home-recent');
-        if (history.length === 0) { recentBox.innerHTML = ""; }
-        else {
-            recentBox.innerHTML = `<div class="card table-card"><div class="day-header" style="grid-column:auto; margin:15px 20px 0; padding-bottom:8px;">Activité récente</div>` +
-                history.slice(0, 3).map(h => `
+        if (history.length === 0) {
+            recentBox.innerHTML = `<div class="card"><div class="empty-hint" style="padding:24px;">Termine ta première séance pour voir tes statistiques apparaître ici.</div></div>`;
+            return;
+        }
+
+        let out = "";
+
+        // Répartition par catégorie (cumul sur tout l'historique)
+        const totalComp = { force: 0, gainage: 0, plio: 0, proprio: 0 };
+        history.forEach(h => { CAT_LIST.forEach(c => { totalComp[c] += Math.round(h.comp[c] || 0); }); });
+        const compList = CAT_LIST.map(c => ({ cat: c }));
+        const flat = [];
+        CAT_LIST.forEach(c => { for (let i = 0; i < totalComp[c]; i++) flat.push({ cat: c }); });
+        if (flat.length) {
+            out += `<div class="card"><div class="day-header" style="grid-column:auto; margin-top:0;">Ta répartition</div>
+                <div class="comp-bar" id="home-comp-bar"></div>
+                <div class="comp-legend" id="home-comp-legend"></div></div>`;
+        }
+
+        // Exos favoris (top 5)
+        const favs = topExercises(5);
+        if (favs.length) {
+            out += `<div class="card table-card"><div class="day-header" style="grid-column:auto; margin:15px 20px 0; padding-bottom:8px;">Tes exercices favoris</div>` +
+                favs.map((e, i) => `
                     <div class="hist-row">
-                        <span class="hist-date">${h.date}</span>
-                        <span class="hist-title">${h.title}</span>
+                        <span style="font-weight:900; color:var(--wood); width:22px;">${i + 1}</span>
+                        <span class="hist-title">${e.n}</span>
+                        <span class="fav-count">${e.count}×</span>
                     </div>`).join("") + `</div>`;
         }
+
+        // Activité récente
+        out += `<div class="card table-card"><div class="day-header" style="grid-column:auto; margin:15px 20px 0; padding-bottom:8px;">Activité récente</div>` +
+            history.slice(0, 3).map(h => `
+                <div class="hist-row">
+                    <span class="hist-date">${fmtHistDate ? fmtHistDate(h.date) : h.date}</span>
+                    <span class="hist-title">${h.title}</span>
+                </div>`).join("") + `</div>`;
+
+        recentBox.innerHTML = out;
+
+        // Rendu de la barre de composition (après insertion dans le DOM)
+        if (flat.length) renderCompositionBar('home-comp-bar', 'home-comp-legend', flat);
     }
 
     function refreshModalSessionOptions() {
