@@ -726,6 +726,29 @@
     <div class="sheet-body"><div id="detail-body"></div></div>
 </div>
 
+<div id="share-sheet" class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+        <div class="sheet-head-top">
+            <h3>Partager la séance</h3>
+            <button class="sheet-close" onclick="closeShareSheet()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+    </div>
+    <div class="sheet-body" style="text-align:center;">
+        <img id="share-img" alt="Résumé de séance" style="max-width:260px; width:100%; border-radius:14px; box-shadow:0 6px 24px rgba(43,38,32,0.3); margin:0 auto 18px;">
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:0 20px 10px;">
+            <button class="action-btn primary" onclick="shareSessionImage()">
+                <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v14"/></svg>
+                <span>Partager</span>
+            </button>
+            <a id="share-download" download="seance-renfo.png" class="action-btn" style="text-decoration:none;">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                <span>Télécharger</span>
+            </a>
+        </div>
+    </div>
+</div>
+
 <div id="ex-modal-overlay" onclick="closeExModal()"></div>
 <div id="ex-modal">
     <h3 id="ex-modal-title">Nouvel exercice</h3>
@@ -1200,8 +1223,9 @@
             exos: s.ex.map(e => ({ id: e.id, n: cleanName(e.n) }))
         });
         saveHistory();
-        // Redirige vers l'accueil (évite les clics répétés sur Terminer)
         goHome();
+        // Propose l'image résumé à partager
+        openSessionImage(s);
         setTimeout(() => { sessionDoneLock = false; }, 1500);
     }
 
@@ -1467,6 +1491,8 @@
         document.getElementById('template-sheet').classList.remove('open');
         const ds = document.getElementById('detail-sheet');
         if (ds) ds.classList.remove('open');
+        const ss = document.getElementById('share-sheet');
+        if (ss) ss.classList.remove('open');
         openAddPanelId = null;
     }
 
@@ -2131,6 +2157,171 @@
         return { start, end };
     }
 
+    // === IMAGE RÉSUMÉ DE SÉANCE (story 1080x1920) ===
+    const PALETTE = { ink: '#2b2620', wood: '#6b5137', stone: '#8c8478', sand: '#c2b8a3', bg: '#f2ede4' };
+    const CAT_HEX = { force: PALETTE.ink, gainage: PALETTE.wood, plio: PALETTE.stone, proprio: PALETTE.sand };
+
+    function generateSessionImage(session) {
+        const W = 1080, H = 1920;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        // Fond dégradé foncé (comme le player)
+        const grad = ctx.createLinearGradient(0, 0, W, H);
+        grad.addColorStop(0, PALETTE.ink);
+        grad.addColorStop(1, '#4a3a28');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+
+        const pad = 90;
+        let y = 150;
+
+        // En-tête : date + titre
+        ctx.textAlign = 'left';
+        ctx.fillStyle = PALETTE.sand;
+        ctx.font = '800 34px system-ui, sans-serif';
+        const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
+        ctx.fillText(dateStr, pad, y);
+        y += 70;
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '900 76px system-ui, sans-serif';
+        const title = (session.t || session.title || 'Séance').toUpperCase();
+        const titleLines = wrapText(ctx, title, pad, y, W - pad * 2, 82);
+        titleLines.forEach((line, i) => ctx.fillText(line, pad, y + i * 82));
+        y += (titleLines.length - 1) * 82 + 90;
+
+        // Durée estimée
+        const ex = session.ex || [];
+        ctx.fillStyle = PALETTE.sand;
+        ctx.font = '800 40px system-ui, sans-serif';
+        ctx.fillText(`${ex.length} exercices · ≈ ${fmtDuration(estimateListMinutes(ex))}`, pad, y);
+        y += 90;
+
+        // Barre de composition
+        const comp = computeComposition(ex);
+        const barW = W - pad * 2, barH = 46, barX = pad;
+        let cx = barX;
+        ctx.save();
+        roundRectPath(ctx, barX, y, barW, barH, 23); ctx.clip();
+        CAT_LIST.forEach(c => {
+            const w = (comp.pct[c] / 100) * barW;
+            ctx.fillStyle = CAT_HEX[c];
+            ctx.fillRect(cx, y, w, barH);
+            cx += w;
+        });
+        ctx.restore();
+        y += barH + 40;
+
+        // Légende composition
+        ctx.font = '700 32px system-ui, sans-serif';
+        let lx = pad;
+        CAT_LIST.forEach(c => {
+            if (comp.pct[c] <= 0) return;
+            ctx.fillStyle = CAT_HEX[c];
+            roundRectPath(ctx, lx, y - 24, 28, 28, 6); ctx.fill();
+            ctx.fillStyle = '#fff';
+            const label = `${CAT_LABELS[c]} ${comp.pct[c]}%`;
+            ctx.fillText(label, lx + 40, y);
+            lx += 48 + ctx.measureText(label).width + 40;
+            if (lx > W - pad - 150) { lx = pad; y += 50; }
+        });
+        y += 90;
+
+        // Séparateur
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+        y += 70;
+
+        // Liste des exercices
+        ctx.font = '900 40px system-ui, sans-serif';
+        ctx.fillStyle = PALETTE.sand;
+        ctx.fillText('EXERCICES', pad, y);
+        y += 70;
+
+        const maxY = H - 180;
+        ctx.font = '700 38px system-ui, sans-serif';
+        for (let i = 0; i < ex.length; i++) {
+            if (y > maxY) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(`+ ${ex.length - i} autres`, pad, y); break; }
+            const e = ex[i];
+            ctx.fillStyle = '#fff';
+            const name = cleanName(e.n);
+            ctx.fillText(name, pad, y);
+            ctx.fillStyle = PALETTE.sand;
+            ctx.textAlign = 'right';
+            ctx.fillText(e.r || '', W - pad, y);
+            ctx.textAlign = 'left';
+            y += 64;
+        }
+
+        // Pied : branding
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = '800 32px system-ui, sans-serif';
+        ctx.fillText('RENFO ULTRA-TRAIL', W / 2, H - 90);
+
+        return canvas;
+    }
+
+    // Découpe un texte en lignes selon une largeur max
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        const lines = [];
+        let line = '';
+        words.forEach(w => {
+            const test = line ? line + ' ' + w : w;
+            if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+            else line = test;
+        });
+        if (line) lines.push(line);
+        return lines;
+    }
+
+    function roundRectPath(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    function openSessionImage(session) {
+        const canvas = generateSessionImage(session);
+        const dataUrl = canvas.toDataURL('image/png');
+        document.getElementById('share-img').src = dataUrl;
+        document.getElementById('share-download').href = dataUrl;
+        document.getElementById('sheet-overlay').classList.add('open');
+        document.getElementById('share-sheet').classList.add('open');
+        // Partage natif si dispo (mobile)
+        window._shareCanvas = canvas;
+    }
+
+    function closeShareSheet() {
+        document.getElementById('share-sheet').classList.remove('open');
+        if (!document.querySelector('.sheet.open')) document.getElementById('sheet-overlay').classList.remove('open');
+    }
+
+    async function shareSessionImage() {
+        const canvas = window._shareCanvas;
+        if (!canvas) return;
+        if (navigator.share && navigator.canShare) {
+            canvas.toBlob(async (blob) => {
+                const file = new File([blob], 'seance-renfo.png', { type: 'image/png' });
+                if (navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file], title: 'Ma séance Renfo Ultra-Trail' }); }
+                    catch (e) { /* annulé */ }
+                } else {
+                    document.getElementById('share-download').click();
+                }
+            }, 'image/png');
+        } else {
+            document.getElementById('share-download').click();
+        }
+    }
+
     // === STATS ===
     // Série de semaines consécutives avec au moins une séance (incluant la semaine en cours si active)
     function computeStreak() {
@@ -2330,6 +2521,7 @@
                         <div class="hist-row">
                             <span class="hist-date">${fmtHistDate(h.date)}</span>
                             <span class="hist-title">${h.title} ${tag}</span>
+                            <button class="mini-btn" onclick="shareHistoryEntry(${idx})">Image</button>
                             ${getData(h.id) ? `<button class="mini-btn" onclick="openSession('${h.id}')">Relancer</button>` : ""}
                             <button class="mini-btn" id="del-hist-${idx}" onclick="deleteHistoryEntry(${idx})">Supprimer</button>
                         </div>`;
@@ -2345,6 +2537,21 @@
         });
         renderCompositionBar('history-comp-bar', 'history-comp-legend', allEx.length ? allEx : CAT_LIST.map(c => ({ cat: c, _empty: true })));
         if (allEx.length === 0) { document.getElementById('history-comp-bar').innerHTML = `<div class="empty-hint" style="flex-grow:1;">Pas encore de données</div>`; }
+    }
+
+    function shareHistoryEntry(idx) {
+        const h = history[idx];
+        if (!h) return;
+        // Reconstitue une session pour l'image : priorité aux exos stockés, sinon la séance d'origine
+        let ex = [];
+        if (h.exos && h.exos.length) {
+            ex = h.exos.map(e => ({ n: e.n, id: e.id, r: e.r || '', cats: [] }));
+        } else if (getData(h.id)) {
+            ex = getData(h.id).ex;
+        }
+        // Recompose les catégories depuis comp si possible (pour la barre) : on passe par la séance d'origine si dispo
+        const srcEx = getData(h.id) ? getData(h.id).ex : ex;
+        openSessionImage({ t: h.title, ex: srcEx.length ? srcEx : ex, _histDate: h.date });
     }
 
     let histDeletePending = null;
