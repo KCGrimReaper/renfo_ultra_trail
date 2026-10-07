@@ -292,10 +292,19 @@
         .variant-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; }
         .variant-info b { color: var(--ink); }
 
+        /* Stats par exercice */
+        .ex-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .ex-stat { background: var(--bg); border-radius: 10px; padding: 12px 8px; text-align: center; }
+        .ex-stat .es-num { font-weight: 900; font-size: 1.05rem; color: var(--ink); line-height: 1.2; }
+        .ex-stat .es-lab { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-top: 4px; letter-spacing: 0.3px; }
+
         /* Options de l'image de partage */
         .share-options { display: flex; flex-direction: column; gap: 4px; text-align: left; max-width: 320px; margin: 0 auto; padding: 0 20px; }
         .share-opt { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; color: var(--ink); cursor: pointer; padding: 6px 0; }
         .share-opt input { width: 18px; height: 18px; accent-color: var(--ink); cursor: pointer; }
+        .share-subopt { display: flex; gap: 18px; padding: 2px 0 6px 30px; }
+        .share-subopt label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--stone); cursor: pointer; }
+        .share-subopt input { accent-color: var(--ink); cursor: pointer; }
         .ambiance-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin:10px 0 5px; }
         .ambiance-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio: 4/3; border:2px solid transparent; background: var(--bg); }
         .ambiance-item img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -764,6 +773,10 @@
         <img id="share-img" alt="Résumé de séance" style="max-width:240px; width:100%; border-radius:14px; box-shadow:0 6px 24px rgba(43,38,32,0.3); margin:0 auto 16px;">
         <div class="share-options" id="share-options">
             <label class="share-opt"><input type="checkbox" id="opt-repartition" checked onchange="refreshShareImage()"> Répartition par catégorie</label>
+            <div class="share-subopt" id="repartition-style-opt">
+                <label><input type="radio" name="rep-style" value="bar" checked onchange="refreshShareImage()"> Barre</label>
+                <label><input type="radio" name="rep-style" value="donut" onchange="refreshShareImage()"> Cercle</label>
+            </div>
             <label class="share-opt"><input type="checkbox" id="opt-exos" checked onchange="refreshShareImage()"> Liste des exercices</label>
             <label class="share-opt"><input type="checkbox" id="opt-reps" checked onchange="refreshShareImage()"> Reps à côté des exercices</label>
             <label class="share-opt"><input type="checkbox" id="opt-materiel" onchange="refreshShareImage()"> Matériel à côté des exercices</label>
@@ -2025,6 +2038,22 @@
                     </div>`).join('') : `<div class="ex-row-sub" style="padding:4px 0;">Aucune variante. Ajoute-en pour décliner cet exercice (ex : lesté, incliné…).</div>`}
             </div>`;
 
+        // Stats d'utilisation de cet exercice
+        const st = exerciseStats(e.id);
+        const statsHtml = st.count > 0 ? `
+            <div class="detail-row" style="flex-direction:column; align-items:stretch; gap:10px;">
+                <span class="dr-label">Statistiques</span>
+                <div class="ex-stats-grid">
+                    <div class="ex-stat"><div class="es-num">${st.count}</div><div class="es-lab">fois réalisé</div></div>
+                    <div class="ex-stat"><div class="es-num">${fmtSeconds(st.avgSec)}</div><div class="es-lab">temps moyen</div></div>
+                    <div class="ex-stat"><div class="es-num">${st.lastDate ? fmtHistDate(st.lastDate) : '—'}</div><div class="es-lab">dernière fois</div></div>
+                </div>
+            </div>` : `
+            <div class="detail-row" style="flex-direction:column; align-items:stretch;">
+                <span class="dr-label">Statistiques</span>
+                <div class="ex-row-sub" style="padding:4px 0;">Pas encore de données. Elles apparaîtront après avoir réalisé cet exercice en séance guidée.</div>
+            </div>`;
+
         document.getElementById('detail-body').innerHTML = `
             <div class="detail-block">
                 <h2>${cleanName(e.n)}</h2>
@@ -2034,6 +2063,7 @@
                 ${line("Zone", a.zones.map(z => ZONE_LABELS[z]).join(", "))}
                 ${line("Matériel", hasMat ? e.m : "Aucun")}
                 ${line("Latéralité", a.uni ? UNI_LABELS[a.uni] : "")}
+                ${statsHtml}
                 ${variantsHtml}
                 <div class="detail-actions">
                     <button class="action-btn primary" onclick="closeDetailSheet(); openEditExForm('${e.id}')">
@@ -2424,34 +2454,70 @@
             } else {
                 comp = computeComposition(ex);
             }
-            const barW = W - pad * 2, barH = 46, barX = pad;
-            let cx = barX;
-            ctx.save();
-            roundRectPath(ctx, barX, y, barW, barH, 23); ctx.clip();
-            CAT_LIST.forEach(c => {
-                const w = (comp.pct[c] / 100) * barW;
-                ctx.fillStyle = CAT_HEX[c];
-                ctx.fillRect(cx, y, w, barH);
-                cx += w;
-            });
-            ctx.restore();
-            y += barH + 40;
+            if (opts.repStyle === 'donut') {
+                // Graphique en cercle (donut) + légende à droite
+                const cxC = pad + 150, cyC = y + 150, rOut = 140, rIn = 78;
+                let angle = -Math.PI / 2;
+                CAT_LIST.forEach(c => {
+                    const frac = comp.pct[c] / 100;
+                    if (frac <= 0) return;
+                    const end = angle + frac * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cxC, cyC);
+                    ctx.arc(cxC, cyC, rOut, angle, end);
+                    ctx.closePath();
+                    ctx.fillStyle = CAT_HEX[c];
+                    ctx.fill();
+                    angle = end;
+                });
+                // Trou central
+                ctx.beginPath(); ctx.arc(cxC, cyC, rIn, 0, Math.PI * 2);
+                ctx.fillStyle = PALETTE.ink; ctx.fill();
+                // Légende à droite du cercle
+                let ly = y + 60;
+                ctx.font = '700 34px system-ui, sans-serif';
+                CAT_LIST.forEach(c => {
+                    if (comp.pct[c] <= 0) return;
+                    const lx = cxC + rOut + 50;
+                    ctx.fillStyle = CAT_HEX[c];
+                    roundRectPath(ctx, lx, ly - 24, 28, 28, 6); ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(`${CAT_LABELS[c]} ${comp.pct[c]}%`, lx + 40, ly);
+                    ly += 56;
+                });
+                y = Math.max(cyC + rOut, ly) + 50;
+            } else {
+                // Barre horizontale + légende sous forme de lignes
+                const barW = W - pad * 2, barH = 46, barX = pad;
+                let cx = barX;
+                ctx.save();
+                roundRectPath(ctx, barX, y, barW, barH, 23); ctx.clip();
+                CAT_LIST.forEach(c => {
+                    const w = (comp.pct[c] / 100) * barW;
+                    ctx.fillStyle = CAT_HEX[c];
+                    ctx.fillRect(cx, y, w, barH);
+                    cx += w;
+                });
+                ctx.restore();
+                y += barH + 40;
 
-            ctx.font = '700 36px system-ui, sans-serif';
-            CAT_LIST.forEach(c => {
-                if (comp.pct[c] <= 0) return;
-                ctx.fillStyle = CAT_HEX[c];
-                roundRectPath(ctx, pad, y - 26, 30, 30, 7); ctx.fill();
-                ctx.fillStyle = '#fff';
-                ctx.textAlign = 'left';
-                ctx.fillText(CAT_LABELS[c], pad + 46, y);
-                ctx.fillStyle = PALETTE.sand;
-                ctx.textAlign = 'right';
-                ctx.fillText(`${comp.pct[c]}%`, W - pad, y);
-                ctx.textAlign = 'left';
-                y += 58;
-            });
-            y += 50;
+                ctx.font = '700 36px system-ui, sans-serif';
+                CAT_LIST.forEach(c => {
+                    if (comp.pct[c] <= 0) return;
+                    ctx.fillStyle = CAT_HEX[c];
+                    roundRectPath(ctx, pad, y - 26, 30, 30, 7); ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(CAT_LABELS[c], pad + 46, y);
+                    ctx.fillStyle = PALETTE.sand;
+                    ctx.textAlign = 'right';
+                    ctx.fillText(`${comp.pct[c]}%`, W - pad, y);
+                    ctx.textAlign = 'left';
+                    y += 58;
+                });
+                y += 50;
+            }
         }
 
         // Liste des exercices (optionnel)
@@ -2526,6 +2592,7 @@
     function readShareOptions() {
         return {
             repartition: document.getElementById('opt-repartition').checked,
+            repStyle: (document.querySelector('input[name="rep-style"]:checked') || {}).value || 'bar',
             exos: document.getElementById('opt-exos').checked,
             reps: document.getElementById('opt-reps').checked,
             materiel: document.getElementById('opt-materiel').checked,
@@ -2621,6 +2688,30 @@
     function isFrequentExercise(id) {
         const counts = exerciseUsageCounts();
         return counts[id] && counts[id].count >= 3;
+    }
+
+    // Stats détaillées d'un exercice : nb de fois, temps moyen d'exécution, dernière fois
+    function exerciseStats(id) {
+        let count = 0, durSum = 0, durCount = 0, lastDate = null;
+        history.forEach(h => {
+            (h.exos || []).forEach(e => {
+                if (e.id !== id) return;
+                count++;
+                if (typeof e.durSec === 'number' && e.durSec > 0) { durSum += e.durSec; durCount++; }
+                if (!lastDate || h.date > lastDate) lastDate = h.date;
+            });
+        });
+        return {
+            count,
+            avgSec: durCount ? Math.round(durSum / durCount) : null,
+            lastDate
+        };
+    }
+
+    function fmtSeconds(sec) {
+        if (sec == null) return '—';
+        const m = Math.floor(sec / 60), s = sec % 60;
+        return m ? `${m}min ${s}s` : `${s}s`;
     }
 
     function renderHome() {
