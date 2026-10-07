@@ -391,6 +391,11 @@
         .player-progress { flex-grow: 1; height: 4px; background: rgba(255,255,255,0.18); border-radius: 2px; overflow: hidden; }
         .player-progress-fill { height: 100%; background: var(--sand); border-radius: 2px; transition: width 0.3s; }
         .player-counter { font-weight: 800; font-size: 0.8rem; letter-spacing: 0.5px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+        .player-clock { font-weight: 900; font-size: 0.95rem; font-family: 'Courier New', monospace; color: #fff; white-space: nowrap; }
+        .hr-btn { gap: 6px; width: auto !important; padding: 0 12px; }
+        .hr-btn #player-hr-val { font-weight: 900; font-size: 0.9rem; color: #fff; font-family: 'Courier New', monospace; }
+        .hr-btn.connected svg { stroke: #ff6b6b; }
+        .hr-btn.connected { background: rgba(255,107,107,0.15); }
         .player-icon-btn { background: rgba(255,255,255,0.1); border: none; border-radius: 10px; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
         .player-icon-btn svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
         .player-icon-btn:hover { background: rgba(255,255,255,0.2); }
@@ -762,7 +767,8 @@
             <label class="share-opt"><input type="checkbox" id="opt-exos" checked onchange="refreshShareImage()"> Liste des exercices</label>
             <label class="share-opt"><input type="checkbox" id="opt-reps" checked onchange="refreshShareImage()"> Reps à côté des exercices</label>
             <label class="share-opt"><input type="checkbox" id="opt-materiel" onchange="refreshShareImage()"> Matériel à côté des exercices</label>
-            <label class="share-opt"><input type="checkbox" id="opt-duree" checked onchange="refreshShareImage()"> Durée estimée</label>
+            <label class="share-opt"><input type="checkbox" id="opt-duree" checked onchange="refreshShareImage()"> Durée</label>
+            <label class="share-opt"><input type="checkbox" id="opt-fc" checked onchange="refreshShareImage()"> Fréquence cardiaque (si mesurée)</label>
         </div>
         <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:14px 20px 10px;">
             <button class="action-btn primary" onclick="shareSessionImage()">
@@ -853,6 +859,11 @@
         <div class="player-top">
             <button class="player-icon-btn" onclick="closePlayer()" aria-label="Fermer">
                 <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <span class="player-clock" id="player-clock">00:00</span>
+            <button class="player-icon-btn hr-btn" onclick="toggleHeartRate()" id="player-hr-btn" aria-label="Fréquence cardiaque">
+                <svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+                <span id="player-hr-val"></span>
             </button>
             <div class="player-progress"><div class="player-progress-fill" id="player-progress-fill"></div></div>
             <button class="player-icon-btn" onclick="togglePlayerBg()" id="player-bg-btn" aria-label="Fond">
@@ -1267,18 +1278,34 @@
         const s = getData(currentId);
         if (!s) return;
         sessionDoneLock = true;
+        // Fige le temps du dernier exercice
+        accrueExerciseTime();
         const comp = computeComposition(s.ex);
-        history.unshift({
+        // Durée réelle totale (secondes) si le chrono a tourné
+        const realSec = sessionStartTs ? Math.round((Date.now() - sessionStartTs) / 1000) : null;
+        const entry = {
             date: new Date().toISOString().slice(0, 10),
             id: currentId,
             title: s.t,
             comp: comp.counts,
-            exos: s.ex.map(e => ({ id: e.id, n: cleanName(e.n) }))
-        });
+            exos: s.ex.map((e, i) => ({
+                id: e.id,
+                n: cleanName(e.n),
+                r: e.r || '',
+                durSec: exerciseDurations[i] != null ? Math.round(exerciseDurations[i] / 1000) : null
+            }))
+        };
+        if (realSec != null) entry.realSec = realSec;
+        if (hrStats.count > 0) {
+            entry.hr = { avg: Math.round(hrStats.sum / hrStats.count), max: hrStats.max };
+        }
+        history.unshift(entry);
         saveHistory();
         goHome();
-        // Propose l'image résumé à partager
-        openSessionImage(s);
+        // Propose l'image résumé à partager (avec durée réelle + FC)
+        openSessionImage({ t: s.t, ex: s.ex, comp: comp.counts, realSec: entry.realSec, hr: entry.hr });
+        // Réinitialise le chrono
+        clearInterval(clockTimer); sessionStartTs = null;
         setTimeout(() => { sessionDoneLock = false; }, 1500);
     }
 
@@ -2365,20 +2392,26 @@
 
         const ex = session.ex || [];
 
-        // Durée estimée (optionnel)
+        // Durée (réelle si dispo, sinon estimée) — optionnel
+        ctx.fillStyle = PALETTE.sand;
+        ctx.font = '800 40px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        let durLine = `${ex.length} exercices`;
         if (opts.duree) {
-            ctx.fillStyle = PALETTE.sand;
-            ctx.font = '800 40px system-ui, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText(`${ex.length} exercices · ≈ ${fmtDuration(estimateListMinutes(ex))}`, pad, y);
-            y += 90;
-        } else {
-            ctx.fillStyle = PALETTE.sand;
-            ctx.font = '800 40px system-ui, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText(`${ex.length} exercices`, pad, y);
-            y += 90;
+            if (session.realSec) durLine += ` · ${fmtDuration(Math.round(session.realSec / 60))}`;
+            else durLine += ` · ≈ ${fmtDuration(estimateListMinutes(ex))}`;
         }
+        ctx.fillText(durLine, pad, y);
+        y += 70;
+
+        // Fréquence cardiaque (si dispo et option activée)
+        if (opts.fc && session.hr) {
+            ctx.fillStyle = '#ff8a7a';
+            ctx.font = '800 38px system-ui, sans-serif';
+            ctx.fillText(`♥ ${session.hr.avg} bpm moy · ${session.hr.max} max`, pad, y);
+            y += 70;
+        }
+        y += 20;
 
         // Répartition (optionnel)
         if (opts.repartition) {
@@ -2496,7 +2529,8 @@
             exos: document.getElementById('opt-exos').checked,
             reps: document.getElementById('opt-reps').checked,
             materiel: document.getElementById('opt-materiel').checked,
-            duree: document.getElementById('opt-duree').checked
+            duree: document.getElementById('opt-duree').checked,
+            fc: document.getElementById('opt-fc').checked
         };
     }
 
@@ -2736,13 +2770,19 @@
                 const rows = groups[key].map(({ h, idx }) => {
                     const dom = historyDominant(h);
                     const tag = dom ? `<span class="cat-tag cat-${dom}">${CAT_LABELS[dom]}</span>` : "";
+                    // Sous-infos : durée réelle + FC
+                    const sub = [];
+                    if (h.realSec) sub.push(`⏱ ${fmtDuration(Math.round(h.realSec / 60))}`);
+                    if (h.hr) sub.push(`♥ ${h.hr.avg} moy · ${h.hr.max} max`);
+                    const subHtml = sub.length ? `<div class="ex-row-sub" style="width:100%; padding-left:0;">${sub.join(' · ')}</div>` : '';
                     return `
-                        <div class="hist-row">
+                        <div class="hist-row" style="flex-wrap:wrap;">
                             <span class="hist-date">${fmtHistDate(h.date)}</span>
                             <span class="hist-title">${h.title} ${tag}</span>
                             <button class="mini-btn" onclick="shareHistoryEntry(${idx})">Image</button>
                             ${getData(h.id) ? `<button class="mini-btn" onclick="openSession('${h.id}')">Relancer</button>` : ""}
                             <button class="mini-btn" id="del-hist-${idx}" onclick="deleteHistoryEntry(${idx})">Supprimer</button>
+                            ${subHtml}
                         </div>`;
                 }).join("");
                 return `<div class="day-header" style="grid-column:auto; margin:15px 20px 0; padding-bottom:8px;">${monthLabel(key)} · ${groups[key].length} séance${groups[key].length > 1 ? 's' : ''}</div>${rows}`;
@@ -2769,7 +2809,7 @@
             ex = getData(h.id).ex.map(e => ({ n: cleanName(e.n), r: e.r || '' }));
         }
         // Composition : on réutilise celle figée au moment de la séance (fiable)
-        openSessionImage({ t: h.title, ex: ex, comp: h.comp, date: h.date });
+        openSessionImage({ t: h.title, ex: ex, comp: h.comp, date: h.date, realSec: h.realSec, hr: h.hr });
     }
 
     let histDeletePending = null;
@@ -2931,6 +2971,11 @@
     let playerIndex = 0;
     let restTimer = null, restEnd = null;
     let playerPhotoOn = true;
+    // Chronométrage réel de la séance
+    let sessionStartTs = null;        // timestamp de début de séance
+    let exerciseDurations = [];       // durée cumulée réelle par exercice (ms)
+    let lastExerciseSwitchTs = null;  // timestamp du dernier changement d'exo
+    let clockTimer = null;            // interval d'affichage du chrono
     let applyingPlayerRemote = false; // évite de repousser un état reçu
 
     // Pousse l'état courant du player vers le cloud (si connecté)
@@ -2996,8 +3041,93 @@
         if (window.matchMedia('(max-width: 800px)').matches) p.classList.remove('list-open');
         else p.classList.add('list-open');
         p.classList.add('open');
+        // Démarre le chronométrage réel
+        startSessionClock(s.ex.length);
         renderPlayer();
         pushPlayerState(true);
+    }
+
+    // === FRÉQUENCE CARDIAQUE (Web Bluetooth) ===
+    let hrDevice = null, hrChar = null;
+    let hrStats = { sum: 0, count: 0, max: 0, last: null };
+
+    async function toggleHeartRate() {
+        if (hrDevice) { disconnectHeartRate(); return; }
+        if (!navigator.bluetooth) {
+            alert("Bluetooth non supporté par ce navigateur. Utilise Chrome ou Edge sur Android/PC (pas Safari/iOS).");
+            return;
+        }
+        try {
+            hrDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ services: ['heart_rate'] }]
+            });
+            hrDevice.addEventListener('gattserverdisconnected', onHrDisconnected);
+            const server = await hrDevice.gatt.connect();
+            const service = await server.getPrimaryService('heart_rate');
+            hrChar = await service.getCharacteristic('heart_rate_measurement');
+            await hrChar.startNotifications();
+            hrChar.addEventListener('characteristicvaluechanged', onHrValue);
+            document.getElementById('player-hr-btn').classList.add('connected');
+        } catch (e) {
+            // Annulé ou échec : on réinitialise
+            hrDevice = null; hrChar = null;
+            if (e && e.name !== 'NotFoundError') console.log('FC :', e.message || e);
+        }
+    }
+
+    function onHrValue(event) {
+        const value = event.target.value;
+        // Format standard Heart Rate Measurement : 1er octet = flags
+        const flags = value.getUint8(0);
+        const is16bit = flags & 0x01;
+        const bpm = is16bit ? value.getUint16(1, true) : value.getUint8(1);
+        if (bpm > 0 && bpm < 250) {
+            hrStats.last = bpm;
+            hrStats.sum += bpm; hrStats.count++;
+            if (bpm > hrStats.max) hrStats.max = bpm;
+            const el = document.getElementById('player-hr-val');
+            if (el) el.innerText = bpm;
+        }
+    }
+
+    function onHrDisconnected() {
+        document.getElementById('player-hr-btn').classList.remove('connected');
+        const el = document.getElementById('player-hr-val');
+        if (el) el.innerText = '';
+        hrChar = null; hrDevice = null;
+    }
+
+    function disconnectHeartRate() {
+        try { if (hrDevice && hrDevice.gatt.connected) hrDevice.gatt.disconnect(); } catch (e) {}
+        onHrDisconnected();
+    }
+
+    function startSessionClock(nbExos) {
+        hrStats = { sum: 0, count: 0, max: 0, last: hrStats.last }; // reset stats, garde le capteur connecté
+        sessionStartTs = Date.now();
+        lastExerciseSwitchTs = sessionStartTs;
+        exerciseDurations = new Array(nbExos).fill(0);
+        clearInterval(clockTimer);
+        clockTimer = setInterval(updateClockDisplay, 1000);
+        updateClockDisplay();
+    }
+
+    function updateClockDisplay() {
+        const el = document.getElementById('player-clock');
+        if (!el || !sessionStartTs) return;
+        const sec = Math.floor((Date.now() - sessionStartTs) / 1000);
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), sc = sec % 60;
+        el.innerText = (h > 0 ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(sc).padStart(2, '0');
+    }
+
+    // Enregistre le temps passé sur l'exo courant avant de changer
+    function accrueExerciseTime() {
+        if (lastExerciseSwitchTs == null || playerIndex == null) return;
+        const now = Date.now();
+        if (exerciseDurations[playerIndex] != null) {
+            exerciseDurations[playerIndex] += now - lastExerciseSwitchTs;
+        }
+        lastExerciseSwitchTs = now;
     }
 
     function applyPlayerBg() {
@@ -3018,6 +3148,7 @@
 
     function closePlayer() {
         stopRest();
+        clearInterval(clockTimer);
         document.getElementById('player').classList.remove('open');
         pushPlayerState(false);
     }
@@ -3118,6 +3249,7 @@
     function playerGoTo(i) {
         const s = getData(currentId);
         if (!s || i < 0 || i >= s.ex.length) return;
+        accrueExerciseTime();
         stopRest();
         playerIndex = i;
         renderPlayer();
@@ -3135,6 +3267,7 @@
     function playerNext() {
         const s = getData(currentId);
         if (!s) return;
+        accrueExerciseTime();
         stopRest();
         if (playerIndex >= s.ex.length - 1) {
             markSessionDone();
@@ -3148,6 +3281,7 @@
 
     function playerPrev() {
         if (playerIndex === 0) return;
+        accrueExerciseTime();
         stopRest();
         playerIndex--;
         renderPlayer();
