@@ -305,6 +305,9 @@
         .share-subopt { display: flex; gap: 18px; padding: 2px 0 6px 30px; }
         .share-subopt label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--stone); cursor: pointer; }
         .share-subopt input { accent-color: var(--ink); cursor: pointer; }
+        .share-theme-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+        .theme-chip { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 14px; font-weight: 700; font-size: 0.78rem; cursor: pointer; color: var(--ink); }
+        .theme-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
         .ambiance-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin:10px 0 5px; }
         .ambiance-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio: 4/3; border:2px solid transparent; background: var(--bg); }
         .ambiance-item img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -443,9 +446,9 @@
 
         .player-music { margin: 0 0 12px; }
         .player-music iframe { display: block; }
-        .music-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-        .music-tab { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.22); border-radius: 16px; padding: 5px 12px; font-weight: 700; font-size: 0.72rem; cursor: pointer; }
-        .music-tab.active { background: var(--sand); color: var(--ink); border-color: var(--sand); }
+        .music-select { width: 100%; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; cursor: pointer; }
+        .music-select option { color: var(--ink); }
+        .music-title { color: rgba(255,255,255,0.7); font-weight: 700; font-size: 0.8rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         .player-bottom { display: flex; flex-direction: column; gap: 14px; }
         .player-rest-inline { display: flex; gap: 8px; justify-content: center; }
         .rest-chip { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 7px 16px; font-weight: 800; cursor: pointer; font-size: 0.8rem; font-family: 'Courier New', monospace; }
@@ -789,6 +792,15 @@
     </div>
     <div class="sheet-body" style="text-align:center;">
         <img id="share-img" alt="Résumé de séance" style="max-width:240px; width:100%; border-radius:14px; box-shadow:0 6px 24px rgba(43,38,32,0.3); margin:0 auto 16px;">
+        <div style="padding:0 20px 4px;">
+            <label style="font-weight:800; font-size:0.7rem; text-transform:uppercase; color:var(--muted); letter-spacing:0.5px;">Ambiance</label>
+            <div class="share-theme-row" id="share-theme-row">
+                <button class="theme-chip active" data-theme="dark" onclick="setShareTheme('dark')">Sombre</button>
+                <button class="theme-chip" data-theme="light" onclick="setShareTheme('light')">Clair</button>
+                <button class="theme-chip" data-theme="chalet" onclick="setShareTheme('chalet')">Chalet</button>
+                <button class="theme-chip" data-theme="noir" onclick="setShareTheme('noir')">Noir</button>
+            </div>
+        </div>
         <div class="share-options" id="share-options">
             <label class="share-opt"><input type="checkbox" id="opt-repartition" checked onchange="refreshShareImage()"> Répartition par catégorie</label>
             <div class="share-subopt" id="repartition-style-opt">
@@ -896,6 +908,9 @@
                 <svg viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
                 <span id="player-hr-val"></span>
             </button>
+            <button class="player-icon-btn" onclick="togglePlayerMusic()" id="player-music-btn" aria-label="Musique" style="display:none;">
+                <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            </button>
             <div class="player-progress"><div class="player-progress-fill" id="player-progress-fill"></div></div>
             <button class="player-icon-btn" onclick="togglePlayerBg()" id="player-bg-btn" aria-label="Fond">
                 <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-6 6"/></svg>
@@ -916,7 +931,7 @@
 
             <div class="player-next-preview" id="player-next-preview"></div>
         </div>
-        <div class="player-music" id="player-music"></div>
+        <div class="player-music" id="player-music" style="display:none;"></div>
         <div class="player-bottom">
             <div class="player-rest-inline" id="player-rest-inline">
                 <button class="rest-chip" onclick="startRest(30)">30s</button>
@@ -2450,22 +2465,38 @@
             </div>`).join('') : `<div class="ex-row-sub" style="padding:6px 0;">Aucune playlist enregistrée.</div>`;
     }
 
-    // Injecte le lecteur + sélecteur de playlist dans le player
-    function renderPlayerMusic() {
+    // Prépare le bouton musique du player (affiché seulement si des playlists existent)
+    function initPlayerMusic() {
+        const btn = document.getElementById('player-music-btn');
+        const box = document.getElementById('player-music');
+        if (btn) btn.style.display = playlists.length ? 'flex' : 'none';
+        if (box) box.style.display = 'none'; // masqué par défaut
+        if (playlists.length) renderPlayerMusic();
+    }
+
+    function togglePlayerMusic() {
         const box = document.getElementById('player-music');
         if (!box) return;
-        if (!playlists.length) { box.innerHTML = ''; return; }
+        const show = box.style.display === 'none';
+        box.style.display = show ? 'block' : 'none';
+        if (show) renderPlayerMusic();
+    }
+
+    // Injecte le lecteur + dropdown de playlist dans le panneau
+    function renderPlayerMusic() {
+        const box = document.getElementById('player-music');
+        if (!box || !playlists.length) return;
         if (activePlaylistIdx >= playlists.length) activePlaylistIdx = 0;
         const embed = spotifyEmbedUrl(playlists[activePlaylistIdx].url);
         const selector = playlists.length > 1 ? `
-            <div class="music-tabs">
-                ${playlists.map((p, i) => `<button class="music-tab${i === activePlaylistIdx ? ' active' : ''}" onclick="setPlayerPlaylist(${i})">${p.name}</button>`).join('')}
-            </div>` : '';
+            <select class="music-select" onchange="setPlayerPlaylist(this.value)">
+                ${playlists.map((p, i) => `<option value="${i}"${i === activePlaylistIdx ? ' selected' : ''}>${p.name}</option>`).join('')}
+            </select>` : `<div class="music-title">${playlists[0].name}</div>`;
         box.innerHTML = selector + (embed ? `<iframe src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '');
     }
 
     function setPlayerPlaylist(idx) {
-        activePlaylistIdx = idx;
+        activePlaylistIdx = +idx;
         renderPlayerMusic();
     }
 
@@ -2473,33 +2504,45 @@
     const PALETTE = { ink: '#2b2620', wood: '#6b5137', stone: '#8c8478', sand: '#c2b8a3', bg: '#f2ede4' };
     const CAT_HEX = { force: PALETTE.ink, gainage: PALETTE.wood, plio: PALETTE.stone, proprio: PALETTE.sand };
 
-    function generateSessionImage(session, opts) {
+    function generateSessionImage(session, opts, bgImageEl) {
         opts = opts || { repartition: true, exos: true, reps: true, materiel: false, duree: true };
+        const COL = SHARE_THEMES[(opts && opts.theme) || 'dark'] || SHARE_THEMES.dark;
         const W = 1080, H = 1920;
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
 
-        // Fond dégradé foncé (comme le player)
-        const grad = ctx.createLinearGradient(0, 0, W, H);
-        grad.addColorStop(0, PALETTE.ink);
-        grad.addColorStop(1, '#4a3a28');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, W, H);
+        // Fond : photo (si thème avec photo et image chargée) sinon dégradé
+        if (COL.photo && bgImageEl) {
+            // Couvre tout le canvas en gardant le ratio
+            const iw = bgImageEl.width, ih = bgImageEl.height;
+            const scale = Math.max(W / iw, H / ih);
+            const dw = iw * scale, dh = ih * scale;
+            ctx.drawImage(bgImageEl, (W - dw) / 2, (H - dh) / 2, dw, dh);
+            // Voile foncé pour lisibilité
+            ctx.fillStyle = 'rgba(20,17,14,0.68)';
+            ctx.fillRect(0, 0, W, H);
+        } else {
+            const grad = ctx.createLinearGradient(0, 0, W, H);
+            grad.addColorStop(0, COL.bg1);
+            grad.addColorStop(1, COL.bg2);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+        }
 
         const pad = 90;
         let y = 150;
 
         // En-tête : date + titre
         ctx.textAlign = 'left';
-        ctx.fillStyle = PALETTE.sand;
+        ctx.fillStyle = COL.accent;
         ctx.font = '800 34px system-ui, sans-serif';
         const dateObj = session.date ? new Date(session.date + 'T12:00:00') : new Date();
         const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
         ctx.fillText(dateStr, pad, y);
         y += 70;
 
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = COL.text;
         ctx.font = '900 76px system-ui, sans-serif';
         const title = (session.t || session.title || 'Séance').toUpperCase();
         const titleLines = wrapText(ctx, title, pad, y, W - pad * 2, 82);
@@ -2509,7 +2552,7 @@
         const ex = session.ex || [];
 
         // Durée (réelle si dispo, sinon estimée) — optionnel
-        ctx.fillStyle = PALETTE.sand;
+        ctx.fillStyle = COL.accent;
         ctx.font = '800 40px system-ui, sans-serif';
         ctx.textAlign = 'left';
         let durLine = `${ex.length} exercices`;
@@ -2558,7 +2601,7 @@
                 });
                 // Trou central
                 ctx.beginPath(); ctx.arc(cxC, cyC, rIn, 0, Math.PI * 2);
-                ctx.fillStyle = PALETTE.ink; ctx.fill();
+                ctx.fillStyle = (COL.photo ? '#1a1510' : COL.bg1); ctx.fill();
                 // Légende à droite du cercle
                 let ly = y + 60;
                 ctx.font = '700 34px system-ui, sans-serif';
@@ -2567,7 +2610,7 @@
                     const lx = cxC + rOut + 50;
                     ctx.fillStyle = CAT_HEX[c];
                     roundRectPath(ctx, lx, ly - 24, 28, 28, 6); ctx.fill();
-                    ctx.fillStyle = '#fff';
+                    ctx.fillStyle = COL.text;
                     ctx.textAlign = 'left';
                     ctx.fillText(`${CAT_LABELS[c]} ${comp.pct[c]}%`, lx + 40, ly);
                     ly += 56;
@@ -2593,10 +2636,10 @@
                     if (comp.pct[c] <= 0) return;
                     ctx.fillStyle = CAT_HEX[c];
                     roundRectPath(ctx, pad, y - 26, 30, 30, 7); ctx.fill();
-                    ctx.fillStyle = '#fff';
+                    ctx.fillStyle = COL.text;
                     ctx.textAlign = 'left';
                     ctx.fillText(CAT_LABELS[c], pad + 46, y);
-                    ctx.fillStyle = PALETTE.sand;
+                    ctx.fillStyle = COL.accent;
                     ctx.textAlign = 'right';
                     ctx.fillText(`${comp.pct[c]}%`, W - pad, y);
                     ctx.textAlign = 'left';
@@ -2613,7 +2656,7 @@
             y += 70;
 
             ctx.font = '900 40px system-ui, sans-serif';
-            ctx.fillStyle = PALETTE.sand;
+            ctx.fillStyle = COL.accent;
             ctx.textAlign = 'left';
             ctx.fillText('EXERCICES', pad, y);
             y += 70;
@@ -2623,7 +2666,7 @@
             for (let i = 0; i < ex.length; i++) {
                 if (y > maxY) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(`+ ${ex.length - i} autres`, pad, y); break; }
                 const e = ex[i];
-                ctx.fillStyle = '#fff';
+                ctx.fillStyle = COL.text;
                 ctx.textAlign = 'left';
                 ctx.fillText(cleanName(e.n), pad, y);
                 // Reps et/ou matériel à droite selon options
@@ -2631,7 +2674,7 @@
                 if (opts.reps && e.r) rightParts.push(e.r);
                 if (opts.materiel && e.m && e.m.toLowerCase() !== 'aucun') rightParts.push(e.m);
                 if (rightParts.length) {
-                    ctx.fillStyle = PALETTE.sand;
+                    ctx.fillStyle = COL.accent;
                     ctx.textAlign = 'right';
                     ctx.fillText(rightParts.join(' · '), W - pad, y);
                     ctx.textAlign = 'left';
@@ -2640,9 +2683,9 @@
             }
         }
 
-        // Pied : branding
+        // Pied : branding (couleur selon clair/foncé)
         ctx.textAlign = 'center';
-        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillStyle = (shareTheme === 'light') ? 'rgba(43,38,32,0.45)' : 'rgba(255,255,255,0.5)';
         ctx.font = '800 32px system-ui, sans-serif';
         ctx.fillText('RENFO ULTRA-TRAIL', W / 2, H - 90);
 
@@ -2677,6 +2720,7 @@
 
     function readShareOptions() {
         return {
+            theme: shareTheme,
             repartition: document.getElementById('opt-repartition').checked,
             repStyle: (document.querySelector('input[name="rep-style"]:checked') || {}).value || 'bar',
             exos: document.getElementById('opt-exos').checked,
@@ -2687,13 +2731,59 @@
         };
     }
 
-    function renderShareCanvas() {
-        if (!_shareSession) return;
-        const canvas = generateSessionImage(_shareSession, readShareOptions());
-        const dataUrl = canvas.toDataURL('image/png');
+    let _shareBgImg = null; // image de fond préchargée pour le thème chalet
+
+    function paintShareCanvas(bgEl) {
+        let canvas = generateSessionImage(_shareSession, readShareOptions(), bgEl);
+        let dataUrl;
+        try {
+            dataUrl = canvas.toDataURL('image/png');
+        } catch (e) {
+            // Canvas "tainté" par l'image externe (CORS) : on refait sans photo
+            const opts = readShareOptions();
+            canvas = generateSessionImage(_shareSession, opts, null);
+            dataUrl = canvas.toDataURL('image/png');
+            const status = document.getElementById('spotify-status');
+            console.log('Image chalet indisponible (CORS), fallback dégradé.');
+        }
         document.getElementById('share-img').src = dataUrl;
         document.getElementById('share-download').href = dataUrl;
         window._shareCanvas = canvas;
+    }
+
+    function renderShareCanvas() {
+        if (!_shareSession) return;
+        const theme = SHARE_THEMES[shareTheme];
+        if (theme && theme.photo) {
+            // Charge la photo puis dessine (une seule fois, puis réutilise)
+            if (_shareBgImg && _shareBgImg.src.includes(encodeURI(theme.photo).split('/').pop().split('?')[0])) {
+                paintShareCanvas(_shareBgImg);
+            } else {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => { _shareBgImg = img; paintShareCanvas(img); };
+                img.onerror = () => { paintShareCanvas(null); }; // fallback dégradé
+                img.src = theme.photo;
+            }
+        } else {
+            paintShareCanvas(null);
+        }
+    }
+
+    let shareTheme = 'dark';
+
+    // Palettes des thèmes d'image
+    const SHARE_THEMES = {
+        dark:  { bg1: PALETTE.ink, bg2: '#4a3a28', text: '#fff', accent: PALETTE.sand, sub: 'rgba(255,255,255,0.82)', photo: null },
+        light: { bg1: '#f2ede4', bg2: '#e0d7c6', text: PALETTE.ink, accent: PALETTE.wood, sub: 'rgba(43,38,32,0.7)', photo: null },
+        chalet:{ bg1: PALETTE.ink, bg2: '#4a3a28', text: '#fff', accent: PALETTE.sand, sub: 'rgba(255,255,255,0.82)', photo: AMBIANCES.chalet ? AMBIANCES.chalet.url : null },
+        noir:  { bg1: '#0a0a0a', bg2: '#1a1a1a', text: '#fff', accent: '#bbb', sub: 'rgba(255,255,255,0.7)', photo: null }
+    };
+
+    function setShareTheme(t) {
+        shareTheme = t;
+        document.querySelectorAll('#share-theme-row .theme-chip').forEach(c => c.classList.toggle('active', c.dataset.theme === t));
+        renderShareCanvas();
     }
 
     function refreshShareImage() { renderShareCanvas(); }
@@ -3220,7 +3310,7 @@
         p.classList.add('open');
         // Démarre le chronométrage réel
         startSessionClock(s.ex.length);
-        renderPlayerMusic();
+        initPlayerMusic();
         renderPlayer();
         pushPlayerState(true);
     }
