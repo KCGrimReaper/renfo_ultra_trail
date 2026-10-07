@@ -280,6 +280,17 @@
         #ex-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card); padding: 25px; border-radius: 14px; box-shadow: 0 10px 40px rgba(43,38,32,0.3); z-index: 3700; width: 90%; max-width: 460px; display: none; max-height: 90vh; overflow-y: auto; }
         #ex-modal.open { display: block; }
         #ex-modal h3 { margin-top: 0; text-transform: uppercase; font-weight: 900; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+
+        /* Modale variante (réutilise le style ex-modal) */
+        #variant-modal-overlay { position: fixed; inset: 0; background: rgba(43,38,32,0.5); z-index: 3800; display: none; }
+        #variant-modal-overlay.open { display: block; }
+        #variant-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card); padding: 25px; border-radius: 14px; box-shadow: 0 10px 40px rgba(43,38,32,0.3); z-index: 3900; width: 90%; max-width: 440px; display: none; max-height: 90vh; overflow-y: auto; }
+        #variant-modal.open { display: block; }
+        #variant-modal h3 { margin-top: 0; text-transform: uppercase; font-weight: 900; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
+
+        /* Lignes de variantes dans la sheet détail */
+        .variant-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; }
+        .variant-info b { color: var(--ink); }
         .ambiance-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin:10px 0 5px; }
         .ambiance-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio: 4/3; border:2px solid transparent; background: var(--bg); }
         .ambiance-item img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -785,6 +796,30 @@
         <button class="toggle-btn btn-full" onclick="closeExModal()">Annuler</button>
     </div>
     <div id="nex-status" style="font-weight:700; font-size:0.8rem; margin-top:8px;"></div>
+</div>
+
+<div id="variant-modal-overlay" onclick="closeVariantForm()"></div>
+<div id="variant-modal">
+    <h3 id="variant-modal-title">Nouvelle variante</h3>
+    <input type="hidden" id="var-ex-id">
+    <input type="hidden" id="var-index">
+    <div class="modal-field">
+        <label>Nom de la variante</label>
+        <input type="text" id="var-label" class="text-input" placeholder="Ex : Lestée, Inclinée, Sur manettes">
+    </div>
+    <div class="add-panel-grid" style="grid-template-columns: 1fr 1fr;">
+        <div><label>Reps (optionnel)</label><input type="text" id="var-reps" class="text-input" placeholder="Ex : 3x12"></div>
+        <div><label>Matériel (optionnel)</label><input type="text" id="var-materiel" class="text-input" placeholder="Ex : Haltères"></div>
+    </div>
+    <div class="modal-field" style="margin-top:12px;">
+        <label>Consigne (optionnel)</label>
+        <textarea id="var-consigne" class="text-input" rows="3" placeholder="Spécificité de cette variante..." style="resize:vertical; min-height:70px; font-family:inherit;"></textarea>
+    </div>
+    <div class="modal-actions">
+        <button class="nav-btn btn-full" onclick="saveVariant()" id="var-submit">Enregistrer</button>
+        <button class="toggle-btn btn-full" onclick="closeVariantForm()">Annuler</button>
+    </div>
+    <div id="var-status" style="font-weight:700; font-size:0.8rem; margin-top:8px;"></div>
 </div>
 
 <div id="player">
@@ -1892,12 +1927,36 @@
     }
 
     // Bottom sheet de détail d'un exercice
+    // Retourne les variantes d'un exercice (tableau, vide si aucune)
+    function getVariants(e) { return Array.isArray(e.variants) ? e.variants : []; }
+
     function openExerciseDetail(id) {
         const e = getExerciseBank().find(x => x.id === id);
         if (!e) return;
         const a = getAttrs(e);
         const hasMat = e.m && e.m.toLowerCase() !== 'aucun';
         const line = (label, val) => val ? `<div class="detail-row"><span class="dr-label">${label}</span><span class="dr-value">${val}</span></div>` : "";
+        const variants = getVariants(e);
+
+        const variantsHtml = `
+            <div class="detail-row" style="flex-direction:column; align-items:stretch; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="dr-label">Variantes</span>
+                    <button class="mini-btn" onclick="openVariantForm('${e.id}', null)">+ Ajouter</button>
+                </div>
+                ${variants.length ? variants.map((v, i) => `
+                    <div class="variant-row">
+                        <div class="variant-info">
+                            <b>${v.label || ('Variante ' + (i + 1))}</b>
+                            <div class="ex-row-sub">${v.r || e.r || ''}${v.m && v.m.toLowerCase() !== 'aucun' ? ' · ' + v.m : ''}</div>
+                            ${v.c ? `<div class="ex-row-sub">${v.c}</div>` : ''}
+                        </div>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <button class="mini-btn" onclick="openVariantForm('${e.id}', ${i})">Éditer</button>
+                            <button class="mini-btn" onclick="deleteVariant('${e.id}', ${i})">✕</button>
+                        </div>
+                    </div>`).join('') : `<div class="ex-row-sub" style="padding:4px 0;">Aucune variante. Ajoute-en pour décliner cet exercice (ex : lesté, incliné…).</div>`}
+            </div>`;
 
         document.getElementById('detail-body').innerHTML = `
             <div class="detail-block">
@@ -1908,6 +1967,7 @@
                 ${line("Zone", a.zones.map(z => ZONE_LABELS[z]).join(", "))}
                 ${line("Matériel", hasMat ? e.m : "Aucun")}
                 ${line("Latéralité", a.uni ? UNI_LABELS[a.uni] : "")}
+                ${variantsHtml}
                 <div class="detail-actions">
                     <button class="action-btn primary" onclick="closeDetailSheet(); openEditExForm('${e.id}')">
                         <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
@@ -1921,6 +1981,75 @@
             </div>`;
         document.getElementById('sheet-overlay').classList.add('open');
         document.getElementById('detail-sheet').classList.add('open');
+    }
+
+    // Garantit qu'on travaille sur une copie éditable (perso) de l'exercice ; renvoie son id
+    function ensureEditableExercise(id) {
+        let idx = customExercises.findIndex(e => e.id === id);
+        if (idx >= 0) return id;
+        // Exercice d'origine : on en crée une copie perso qui masque l'original
+        const orig = getExerciseBank().find(e => e.id === id);
+        if (!orig) return null;
+        const copy = { ...orig, id: 'U' + Date.now(), userCreated: true, variants: getVariants(orig).map(v => ({ ...v })) };
+        customExercises.push(copy);
+        if (!deletedExerciseIds.includes(id)) { deletedExerciseIds.push(id); saveDeletedExercises(); }
+        saveCustomExercises();
+        return copy.id;
+    }
+
+    function deleteVariant(exId, vIdx) {
+        const realId = ensureEditableExercise(exId);
+        const e = customExercises.find(x => x.id === realId);
+        if (!e || !Array.isArray(e.variants)) return;
+        e.variants.splice(vIdx, 1);
+        saveCustomExercises();
+        renderExerciseManager();
+        openExerciseDetail(realId);
+    }
+
+    function openVariantForm(exId, vIdx) {
+        const e = getExerciseBank().find(x => x.id === exId);
+        if (!e) return;
+        document.getElementById('var-ex-id').value = exId;
+        document.getElementById('var-index').value = (vIdx === null || vIdx === undefined) ? '' : vIdx;
+        const editing = vIdx !== null && vIdx !== undefined;
+        const v = editing ? getVariants(e)[vIdx] : null;
+        document.getElementById('variant-modal-title').innerText = editing ? "Modifier la variante" : "Nouvelle variante";
+        document.getElementById('var-label').value = v ? (v.label || '') : '';
+        document.getElementById('var-reps').value = v ? (v.r || '') : '';
+        document.getElementById('var-materiel').value = v ? (v.m && v.m.toLowerCase() !== 'aucun' ? v.m : '') : '';
+        document.getElementById('var-consigne').value = v ? (v.c || '') : '';
+        document.getElementById('var-status').innerText = '';
+        document.getElementById('variant-modal-overlay').classList.add('open');
+        document.getElementById('variant-modal').classList.add('open');
+    }
+
+    function closeVariantForm() {
+        document.getElementById('variant-modal-overlay').classList.remove('open');
+        document.getElementById('variant-modal').classList.remove('open');
+    }
+
+    function saveVariant() {
+        const exId = document.getElementById('var-ex-id').value;
+        const label = document.getElementById('var-label').value.trim();
+        if (!label) { document.getElementById('var-status').innerText = "Donne un nom à la variante."; return; }
+        const variant = {
+            label,
+            r: document.getElementById('var-reps').value.trim(),
+            m: document.getElementById('var-materiel').value.trim() || 'Aucun',
+            c: document.getElementById('var-consigne').value.trim()
+        };
+        const realId = ensureEditableExercise(exId);
+        const e = customExercises.find(x => x.id === realId);
+        if (!e) return;
+        if (!Array.isArray(e.variants)) e.variants = [];
+        const vIdxRaw = document.getElementById('var-index').value;
+        if (vIdxRaw === '') e.variants.push(variant);
+        else e.variants[+vIdxRaw] = variant;
+        saveCustomExercises();
+        closeVariantForm();
+        renderExerciseManager();
+        openExerciseDetail(realId);
     }
 
     function closeDetailSheet() {
@@ -2223,20 +2352,22 @@
         ctx.restore();
         y += barH + 40;
 
-        // Légende composition
-        ctx.font = '700 32px system-ui, sans-serif';
-        let lx = pad;
+        // Légende composition : une catégorie par ligne (pastille + nom à gauche, % à droite)
+        ctx.font = '700 36px system-ui, sans-serif';
         CAT_LIST.forEach(c => {
             if (comp.pct[c] <= 0) return;
             ctx.fillStyle = CAT_HEX[c];
-            roundRectPath(ctx, lx, y - 24, 28, 28, 6); ctx.fill();
+            roundRectPath(ctx, pad, y - 26, 30, 30, 7); ctx.fill();
             ctx.fillStyle = '#fff';
-            const label = `${CAT_LABELS[c]} ${comp.pct[c]}%`;
-            ctx.fillText(label, lx + 40, y);
-            lx += 48 + ctx.measureText(label).width + 40;
-            if (lx > W - pad - 150) { lx = pad; y += 50; }
+            ctx.textAlign = 'left';
+            ctx.fillText(CAT_LABELS[c], pad + 46, y);
+            ctx.fillStyle = PALETTE.sand;
+            ctx.textAlign = 'right';
+            ctx.fillText(`${comp.pct[c]}%`, W - pad, y);
+            ctx.textAlign = 'left';
+            y += 58;
         });
-        y += 90;
+        y += 50;
 
         // Séparateur
         ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2;
