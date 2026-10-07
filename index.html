@@ -402,6 +402,9 @@
         .player-reps { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--sand); letter-spacing: 1px; }
         .player-sub { font-size: 1.05rem; line-height: 1.5; color: rgba(255,255,255,0.82); max-width: 480px; }
         .player-materiel { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: rgba(255,255,255,0.55); }
+        .player-variant { margin-top: 4px; }
+        .player-variant-select { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+        .player-variant-select option { color: var(--ink); }
 
         /* Mobile : barre EN SUPERPOSITION (ne pousse pas le contenu), même pilotage par .list-open */
         @media (max-width: 800px) {
@@ -849,6 +852,7 @@
             <div class="player-reps" id="player-reps"></div>
             <div class="player-sub" id="player-consigne"></div>
             <div class="player-materiel" id="player-materiel"></div>
+            <div class="player-variant" id="player-variant"></div>
 
             <div class="player-rest-zone" id="player-rest-zone">
                 <div class="player-rest" id="player-rest">00:00</div>
@@ -1671,6 +1675,14 @@
                 </div>
                 <div class="add-panel${panelOpen ? " open" : ""}" id="panel-${e.id}">
                     <div class="ex-row-sub" style="margin-bottom:10px;">${e.c || ""}${hasMateriel ? " — " + e.m : ""}</div>
+                    ${getVariants(e).length ? `
+                    <div class="modal-field" style="margin-bottom:10px;">
+                        <label>Variante</label>
+                        <select id="variant-${e.id}" class="text-input">
+                            <option value="-1">Standard</option>
+                            ${getVariants(e).map((v, i) => `<option value="${i}">${v.label || ('Variante ' + (i + 1))}</option>`).join('')}
+                        </select>
+                    </div>` : ''}
                     <div class="add-panel-grid">
                         <div><label>Séries</label><input type="number" min="1" max="10" value="${def.series}" id="series-${e.id}" class="text-input"></div>
                         <div><label>Reps</label><input type="number" min="1" max="100" value="${def.reps}" id="reps-${e.id}" class="text-input"></div>
@@ -1701,9 +1713,23 @@
         const detail = dEl ? dEl.value.trim() : "";
 
         const entry = { ...e };
+        // Variante choisie ?
+        const varEl = document.getElementById('variant-' + id);
+        const vIdx = varEl ? +varEl.value : -1;
+        if (vIdx >= 0) {
+            const v = getVariants(e)[vIdx];
+            if (v) {
+                entry.variantLabel = v.label;
+                entry.baseName = cleanName(e.n);
+                entry.n = `${cleanName(e.n)} — ${v.label}`;
+                if (v.c) entry.c = v.c;
+                if (v.m) entry.m = v.m;
+            }
+        }
         entry.r = `${series}x${reps}`;
-        if (detail) entry.m = `${e.m} · ${detail}`;
-        delete entry.inter; delete entry.expert;
+        const baseM = entry.m || e.m;
+        if (detail) entry.m = `${baseM} · ${detail}`;
+        delete entry.inter; delete entry.expert; delete entry.variants;
         currentBuilderList.push(entry);
 
         openAddPanelId = null;
@@ -2958,6 +2984,23 @@
         document.getElementById('player-consigne').innerText = e.c || "";
         document.getElementById('player-next-btn').innerText = (playerIndex === total - 1) ? "Terminer" : "Suivant";
 
+        // Sélecteur de variante en live (si l'exo d'origine a des variantes)
+        const varBox = document.getElementById('player-variant');
+        if (varBox) {
+            const base = getExerciseBank().find(x => x.id === e.id);
+            const variants = base ? getVariants(base) : [];
+            if (variants.length) {
+                const current = e.variantLabel || 'Standard';
+                varBox.innerHTML = `
+                    <select class="player-variant-select" onchange="changePlayerVariant(this.value)">
+                        <option value="-1"${!e.variantLabel ? ' selected' : ''}>Standard</option>
+                        ${variants.map((v, i) => `<option value="${i}"${e.variantLabel === v.label ? ' selected' : ''}>${v.label || ('Variante ' + (i + 1))}</option>`).join('')}
+                    </select>`;
+            } else {
+                varBox.innerHTML = '';
+            }
+        }
+
         // Panneau liste : tous les exercices, état fait/courant/à venir, cliquables
         const sidebar = document.getElementById('player-sidebar-list');
         if (sidebar) {
@@ -2985,6 +3028,37 @@
                 preview.innerHTML = `Dernier exercice`;
             }
         }
+    }
+
+    // Change la variante de l'exercice courant pendant la séance
+    function changePlayerVariant(valStr) {
+        const s = getData(currentId);
+        if (!s) return;
+        const e = s.ex[playerIndex];
+        const base = getExerciseBank().find(x => x.id === e.id);
+        if (!base) return;
+        const vIdx = +valStr;
+        // Repère les séries/reps actuels pour les conserver
+        const baseName = e.baseName || cleanName(e.n);
+        if (vIdx < 0) {
+            // Retour au standard
+            e.n = baseName;
+            e.c = base.c;
+            e.m = base.m;
+            delete e.variantLabel;
+            delete e.baseName;
+        } else {
+            const v = getVariants(base)[vIdx];
+            if (!v) return;
+            e.baseName = baseName;
+            e.variantLabel = v.label;
+            e.n = `${baseName} — ${v.label}`;
+            if (v.c) e.c = v.c;
+            if (v.m) e.m = v.m;
+            if (v.r) e.r = v.r;
+        }
+        renderPlayer();
+        pushPlayerState(true);
     }
 
     // Navigation directe vers un exercice via la liste
