@@ -291,6 +291,11 @@
         /* Lignes de variantes dans la sheet détail */
         .variant-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--bg); border-radius: 8px; }
         .variant-info b { color: var(--ink); }
+
+        /* Options de l'image de partage */
+        .share-options { display: flex; flex-direction: column; gap: 4px; text-align: left; max-width: 320px; margin: 0 auto; padding: 0 20px; }
+        .share-opt { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; color: var(--ink); cursor: pointer; padding: 6px 0; }
+        .share-opt input { width: 18px; height: 18px; accent-color: var(--ink); cursor: pointer; }
         .ambiance-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin:10px 0 5px; }
         .ambiance-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio: 4/3; border:2px solid transparent; background: var(--bg); }
         .ambiance-item img { width:100%; height:100%; object-fit:cover; display:block; }
@@ -402,9 +407,11 @@
         .player-reps { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; color: var(--sand); letter-spacing: 1px; }
         .player-sub { font-size: 1.05rem; line-height: 1.5; color: rgba(255,255,255,0.82); max-width: 480px; }
         .player-materiel { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; color: rgba(255,255,255,0.55); }
-        .player-variant { margin-top: 4px; }
-        .player-variant-select { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 14px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-        .player-variant-select option { color: var(--ink); }
+        .player-variant { margin-top: 6px; }
+        .variant-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .variant-chip { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 6px 14px; font-weight: 700; font-size: 0.78rem; cursor: pointer; transition: 0.15s; }
+        .variant-chip:hover { background: rgba(255,255,255,0.2); }
+        .variant-chip.active { background: var(--sand); color: var(--ink); border-color: var(--sand); }
 
         /* Mobile : barre EN SUPERPOSITION (ne pousse pas le contenu), même pilotage par .list-open */
         @media (max-width: 800px) {
@@ -749,8 +756,15 @@
         </div>
     </div>
     <div class="sheet-body" style="text-align:center;">
-        <img id="share-img" alt="Résumé de séance" style="max-width:260px; width:100%; border-radius:14px; box-shadow:0 6px 24px rgba(43,38,32,0.3); margin:0 auto 18px;">
-        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:0 20px 10px;">
+        <img id="share-img" alt="Résumé de séance" style="max-width:240px; width:100%; border-radius:14px; box-shadow:0 6px 24px rgba(43,38,32,0.3); margin:0 auto 16px;">
+        <div class="share-options" id="share-options">
+            <label class="share-opt"><input type="checkbox" id="opt-repartition" checked onchange="refreshShareImage()"> Répartition par catégorie</label>
+            <label class="share-opt"><input type="checkbox" id="opt-exos" checked onchange="refreshShareImage()"> Liste des exercices</label>
+            <label class="share-opt"><input type="checkbox" id="opt-reps" checked onchange="refreshShareImage()"> Reps à côté des exercices</label>
+            <label class="share-opt"><input type="checkbox" id="opt-materiel" onchange="refreshShareImage()"> Matériel à côté des exercices</label>
+            <label class="share-opt"><input type="checkbox" id="opt-duree" checked onchange="refreshShareImage()"> Durée estimée</label>
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:14px 20px 10px;">
             <button class="action-btn primary" onclick="shareSessionImage()">
                 <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v14"/></svg>
                 <span>Partager</span>
@@ -2316,7 +2330,8 @@
     const PALETTE = { ink: '#2b2620', wood: '#6b5137', stone: '#8c8478', sand: '#c2b8a3', bg: '#f2ede4' };
     const CAT_HEX = { force: PALETTE.ink, gainage: PALETTE.wood, plio: PALETTE.stone, proprio: PALETTE.sand };
 
-    function generateSessionImage(session) {
+    function generateSessionImage(session, opts) {
+        opts = opts || { repartition: true, exos: true, reps: true, materiel: false, duree: true };
         const W = 1080, H = 1920;
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
@@ -2348,77 +2363,96 @@
         titleLines.forEach((line, i) => ctx.fillText(line, pad, y + i * 82));
         y += (titleLines.length - 1) * 82 + 90;
 
-        // Durée estimée
         const ex = session.ex || [];
-        ctx.fillStyle = PALETTE.sand;
-        ctx.font = '800 40px system-ui, sans-serif';
-        ctx.fillText(`${ex.length} exercices · ≈ ${fmtDuration(estimateListMinutes(ex))}`, pad, y);
-        y += 90;
 
-        // Barre de composition : utilise la comp fournie (historique) ou calcule depuis les exos
-        let comp;
-        if (session.comp) {
-            const counts = session.comp;
-            const totalC = CAT_LIST.reduce((a, c) => a + (counts[c] || 0), 0) || 1;
-            const pct = {}; CAT_LIST.forEach(c => pct[c] = Math.round(((counts[c] || 0) / totalC) * 100));
-            comp = { pct };
+        // Durée estimée (optionnel)
+        if (opts.duree) {
+            ctx.fillStyle = PALETTE.sand;
+            ctx.font = '800 40px system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${ex.length} exercices · ≈ ${fmtDuration(estimateListMinutes(ex))}`, pad, y);
+            y += 90;
         } else {
-            comp = computeComposition(ex);
+            ctx.fillStyle = PALETTE.sand;
+            ctx.font = '800 40px system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${ex.length} exercices`, pad, y);
+            y += 90;
         }
-        const barW = W - pad * 2, barH = 46, barX = pad;
-        let cx = barX;
-        ctx.save();
-        roundRectPath(ctx, barX, y, barW, barH, 23); ctx.clip();
-        CAT_LIST.forEach(c => {
-            const w = (comp.pct[c] / 100) * barW;
-            ctx.fillStyle = CAT_HEX[c];
-            ctx.fillRect(cx, y, w, barH);
-            cx += w;
-        });
-        ctx.restore();
-        y += barH + 40;
 
-        // Légende composition : une catégorie par ligne (pastille + nom à gauche, % à droite)
-        ctx.font = '700 36px system-ui, sans-serif';
-        CAT_LIST.forEach(c => {
-            if (comp.pct[c] <= 0) return;
-            ctx.fillStyle = CAT_HEX[c];
-            roundRectPath(ctx, pad, y - 26, 30, 30, 7); ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'left';
-            ctx.fillText(CAT_LABELS[c], pad + 46, y);
+        // Répartition (optionnel)
+        if (opts.repartition) {
+            let comp;
+            if (session.comp) {
+                const counts = session.comp;
+                const totalC = CAT_LIST.reduce((a, c) => a + (counts[c] || 0), 0) || 1;
+                const pct = {}; CAT_LIST.forEach(c => pct[c] = Math.round(((counts[c] || 0) / totalC) * 100));
+                comp = { pct };
+            } else {
+                comp = computeComposition(ex);
+            }
+            const barW = W - pad * 2, barH = 46, barX = pad;
+            let cx = barX;
+            ctx.save();
+            roundRectPath(ctx, barX, y, barW, barH, 23); ctx.clip();
+            CAT_LIST.forEach(c => {
+                const w = (comp.pct[c] / 100) * barW;
+                ctx.fillStyle = CAT_HEX[c];
+                ctx.fillRect(cx, y, w, barH);
+                cx += w;
+            });
+            ctx.restore();
+            y += barH + 40;
+
+            ctx.font = '700 36px system-ui, sans-serif';
+            CAT_LIST.forEach(c => {
+                if (comp.pct[c] <= 0) return;
+                ctx.fillStyle = CAT_HEX[c];
+                roundRectPath(ctx, pad, y - 26, 30, 30, 7); ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'left';
+                ctx.fillText(CAT_LABELS[c], pad + 46, y);
+                ctx.fillStyle = PALETTE.sand;
+                ctx.textAlign = 'right';
+                ctx.fillText(`${comp.pct[c]}%`, W - pad, y);
+                ctx.textAlign = 'left';
+                y += 58;
+            });
+            y += 50;
+        }
+
+        // Liste des exercices (optionnel)
+        if (opts.exos) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+            y += 70;
+
+            ctx.font = '900 40px system-ui, sans-serif';
             ctx.fillStyle = PALETTE.sand;
-            ctx.textAlign = 'right';
-            ctx.fillText(`${comp.pct[c]}%`, W - pad, y);
             ctx.textAlign = 'left';
-            y += 58;
-        });
-        y += 50;
+            ctx.fillText('EXERCICES', pad, y);
+            y += 70;
 
-        // Séparateur
-        ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
-        y += 70;
-
-        // Liste des exercices
-        ctx.font = '900 40px system-ui, sans-serif';
-        ctx.fillStyle = PALETTE.sand;
-        ctx.fillText('EXERCICES', pad, y);
-        y += 70;
-
-        const maxY = H - 180;
-        ctx.font = '700 38px system-ui, sans-serif';
-        for (let i = 0; i < ex.length; i++) {
-            if (y > maxY) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(`+ ${ex.length - i} autres`, pad, y); break; }
-            const e = ex[i];
-            ctx.fillStyle = '#fff';
-            const name = cleanName(e.n);
-            ctx.fillText(name, pad, y);
-            ctx.fillStyle = PALETTE.sand;
-            ctx.textAlign = 'right';
-            ctx.fillText(e.r || '', W - pad, y);
-            ctx.textAlign = 'left';
-            y += 64;
+            const maxY = H - 180;
+            ctx.font = '700 38px system-ui, sans-serif';
+            for (let i = 0; i < ex.length; i++) {
+                if (y > maxY) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(`+ ${ex.length - i} autres`, pad, y); break; }
+                const e = ex[i];
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'left';
+                ctx.fillText(cleanName(e.n), pad, y);
+                // Reps et/ou matériel à droite selon options
+                const rightParts = [];
+                if (opts.reps && e.r) rightParts.push(e.r);
+                if (opts.materiel && e.m && e.m.toLowerCase() !== 'aucun') rightParts.push(e.m);
+                if (rightParts.length) {
+                    ctx.fillStyle = PALETTE.sand;
+                    ctx.textAlign = 'right';
+                    ctx.fillText(rightParts.join(' · '), W - pad, y);
+                    ctx.textAlign = 'left';
+                }
+                y += 64;
+            }
         }
 
         // Pied : branding
@@ -2454,15 +2488,34 @@
         ctx.closePath();
     }
 
-    function openSessionImage(session) {
-        const canvas = generateSessionImage(session);
+    let _shareSession = null;
+
+    function readShareOptions() {
+        return {
+            repartition: document.getElementById('opt-repartition').checked,
+            exos: document.getElementById('opt-exos').checked,
+            reps: document.getElementById('opt-reps').checked,
+            materiel: document.getElementById('opt-materiel').checked,
+            duree: document.getElementById('opt-duree').checked
+        };
+    }
+
+    function renderShareCanvas() {
+        if (!_shareSession) return;
+        const canvas = generateSessionImage(_shareSession, readShareOptions());
         const dataUrl = canvas.toDataURL('image/png');
         document.getElementById('share-img').src = dataUrl;
         document.getElementById('share-download').href = dataUrl;
+        window._shareCanvas = canvas;
+    }
+
+    function refreshShareImage() { renderShareCanvas(); }
+
+    function openSessionImage(session) {
+        _shareSession = session;
+        renderShareCanvas();
         document.getElementById('sheet-overlay').classList.add('open');
         document.getElementById('share-sheet').classList.add('open');
-        // Partage natif si dispo (mobile)
-        window._shareCanvas = canvas;
     }
 
     function closeShareSheet() {
@@ -2984,18 +3037,18 @@
         document.getElementById('player-consigne').innerText = e.c || "";
         document.getElementById('player-next-btn').innerText = (playerIndex === total - 1) ? "Terminer" : "Suivant";
 
-        // Sélecteur de variante en live (si l'exo d'origine a des variantes)
+        // Sélecteur de variante en live (chips custom, si l'exo d'origine a des variantes)
         const varBox = document.getElementById('player-variant');
         if (varBox) {
             const base = getExerciseBank().find(x => x.id === e.id);
             const variants = base ? getVariants(base) : [];
             if (variants.length) {
-                const current = e.variantLabel || 'Standard';
-                varBox.innerHTML = `
-                    <select class="player-variant-select" onchange="changePlayerVariant(this.value)">
-                        <option value="-1"${!e.variantLabel ? ' selected' : ''}>Standard</option>
-                        ${variants.map((v, i) => `<option value="${i}"${e.variantLabel === v.label ? ' selected' : ''}>${v.label || ('Variante ' + (i + 1))}</option>`).join('')}
-                    </select>`;
+                const chip = (label, val, active) =>
+                    `<button class="variant-chip${active ? ' active' : ''}" onclick="changePlayerVariant('${val}')">${label}</button>`;
+                varBox.innerHTML = `<div class="variant-chips">` +
+                    chip('Standard', '-1', !e.variantLabel) +
+                    variants.map((v, i) => chip(v.label || ('Variante ' + (i + 1)), i, e.variantLabel === v.label)).join('') +
+                    `</div>`;
             } else {
                 varBox.innerHTML = '';
             }
