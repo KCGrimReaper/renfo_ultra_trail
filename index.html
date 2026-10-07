@@ -2181,7 +2181,8 @@
         ctx.textAlign = 'left';
         ctx.fillStyle = PALETTE.sand;
         ctx.font = '800 34px system-ui, sans-serif';
-        const dateStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
+        const dateObj = session.date ? new Date(session.date + 'T12:00:00') : new Date();
+        const dateStr = dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase();
         ctx.fillText(dateStr, pad, y);
         y += 70;
 
@@ -2199,8 +2200,16 @@
         ctx.fillText(`${ex.length} exercices · ≈ ${fmtDuration(estimateListMinutes(ex))}`, pad, y);
         y += 90;
 
-        // Barre de composition
-        const comp = computeComposition(ex);
+        // Barre de composition : utilise la comp fournie (historique) ou calcule depuis les exos
+        let comp;
+        if (session.comp) {
+            const counts = session.comp;
+            const totalC = CAT_LIST.reduce((a, c) => a + (counts[c] || 0), 0) || 1;
+            const pct = {}; CAT_LIST.forEach(c => pct[c] = Math.round(((counts[c] || 0) / totalC) * 100));
+            comp = { pct };
+        } else {
+            comp = computeComposition(ex);
+        }
         const barW = W - pad * 2, barH = 46, barX = pad;
         let cx = barX;
         ctx.save();
@@ -2542,16 +2551,15 @@
     function shareHistoryEntry(idx) {
         const h = history[idx];
         if (!h) return;
-        // Reconstitue une session pour l'image : priorité aux exos stockés, sinon la séance d'origine
+        // Exos : stockés dans l'historique en priorité, sinon la séance d'origine si encore là
         let ex = [];
         if (h.exos && h.exos.length) {
-            ex = h.exos.map(e => ({ n: e.n, id: e.id, r: e.r || '', cats: [] }));
+            ex = h.exos.map(e => ({ n: e.n, id: e.id, r: e.r || '' }));
         } else if (getData(h.id)) {
-            ex = getData(h.id).ex;
+            ex = getData(h.id).ex.map(e => ({ n: cleanName(e.n), r: e.r || '' }));
         }
-        // Recompose les catégories depuis comp si possible (pour la barre) : on passe par la séance d'origine si dispo
-        const srcEx = getData(h.id) ? getData(h.id).ex : ex;
-        openSessionImage({ t: h.title, ex: srcEx.length ? srcEx : ex, _histDate: h.date });
+        // Composition : on réutilise celle figée au moment de la séance (fiable)
+        openSessionImage({ t: h.title, ex: ex, comp: h.comp, date: h.date });
     }
 
     let histDeletePending = null;
@@ -2737,7 +2745,11 @@
                     if (!isOpen) {
                         playerPhotoOn = !!playerPhotoUrl();
                         applyPlayerBg();
-                        document.getElementById('player').classList.add('open');
+                        const pp = document.getElementById('player');
+                        // Barre fermée sur mobile, ouverte sur desktop (comme openPlayer)
+                        if (window.matchMedia('(max-width: 800px)').matches) pp.classList.remove('list-open');
+                        else pp.classList.add('list-open');
+                        pp.classList.add('open');
                     }
                     renderPlayer();
                     // Synchro du repos : heure de fin partagée
