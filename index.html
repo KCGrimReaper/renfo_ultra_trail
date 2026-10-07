@@ -443,6 +443,9 @@
 
         .player-music { margin: 0 0 12px; }
         .player-music iframe { display: block; }
+        .music-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+        .music-tab { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.22); border-radius: 16px; padding: 5px 12px; font-weight: 700; font-size: 0.72rem; cursor: pointer; }
+        .music-tab.active { background: var(--sand); color: var(--ink); border-color: var(--sand); }
         .player-bottom { display: flex; flex-direction: column; gap: 14px; }
         .player-rest-inline { display: flex; gap: 8px; justify-content: center; }
         .rest-chip { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 7px 16px; font-weight: 800; cursor: pointer; font-size: 0.8rem; font-family: 'Courier New', monospace; }
@@ -704,13 +707,16 @@
         </div>
         <div class="card">
             <div class="day-header" style="grid-column:auto; margin-top:0;">Musique</div>
-            <p style="font-weight:600; margin-top:12px;">Colle un lien Spotify (playlist, album ou titre) pour l'écouter pendant la séance guidée. Dans Spotify : Partager → Copier le lien.</p>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <input type="text" id="spotify-input" class="text-input" style="flex-grow:1;" placeholder="https://open.spotify.com/playlist/...">
-                <button class="toggle-btn" onclick="saveSpotify()">Enregistrer</button>
+            <p style="font-weight:600; margin-top:12px;">Ajoute une ou plusieurs playlists Spotify à écouter pendant la séance guidée. Dans Spotify : Partager → Copier le lien.</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                <input type="text" id="spotify-name" class="text-input" placeholder="Nom (ex : Montée, Récup, Motivation)">
+                <div style="display:flex; gap:10px;">
+                    <input type="text" id="spotify-input" class="text-input" style="flex-grow:1;" placeholder="https://open.spotify.com/playlist/...">
+                    <button class="toggle-btn" onclick="addPlaylist()">Ajouter</button>
+                </div>
             </div>
             <div id="spotify-status" style="font-weight:700; font-size:0.8rem; margin-top:8px; color:var(--wood);"></div>
-            <div id="spotify-preview" style="margin-top:12px;"></div>
+            <div id="spotify-list" style="margin-top:12px;"></div>
         </div>
         <div class="card">
             <div class="day-header" style="grid-column:auto; margin-top:0;">Sauvegarde</div>
@@ -1379,7 +1385,7 @@
         if(screenId === 'builder-screen') renderBuilderSession();
         if(screenId === 'exercises-screen') renderExerciseManager();
         if(screenId === 'history-screen') renderHistoryScreen();
-        if(screenId === 'settings-screen') { renderAmbiancePicker(); renderSpotifyPreview(); }
+        if(screenId === 'settings-screen') { renderAmbiancePicker(); renderPlaylistManager(); }
         window.scrollTo(0, 0);
     }
 
@@ -2396,52 +2402,71 @@
         return { start, end };
     }
 
-    // === MUSIQUE SPOTIFY (lecteur intégré) ===
-    let spotifyUrl = localStorage.getItem('ultraSpotify') || '';
+    // === MUSIQUE SPOTIFY (lecteur intégré, plusieurs playlists) ===
+    let playlists = JSON.parse(localStorage.getItem('ultraPlaylists') || '[]'); // [{name, url}]
+    let activePlaylistIdx = 0;
+
+    function savePlaylists() { localStorage.setItem('ultraPlaylists', JSON.stringify(playlists)); }
 
     // Transforme un lien Spotify en URL d'embed. Renvoie null si invalide.
     function spotifyEmbedUrl(url) {
         if (!url) return null;
-        // Formats : open.spotify.com/{type}/{id} éventuellement avec ?si=...
         const m = /open\.spotify\.com\/(playlist|album|track|artist|show|episode)\/([A-Za-z0-9]+)/.exec(url);
         if (!m) return null;
         return `https://open.spotify.com/embed/${m[1]}/${m[2]}`;
     }
 
-    function saveSpotify() {
-        const input = document.getElementById('spotify-input').value.trim();
+    function addPlaylist() {
+        const urlEl = document.getElementById('spotify-input');
+        const nameEl = document.getElementById('spotify-name');
         const status = document.getElementById('spotify-status');
-        if (!input) {
-            spotifyUrl = '';
-            localStorage.setItem('ultraSpotify', '');
-            status.innerText = "Musique retirée.";
-            renderSpotifyPreview();
-            return;
-        }
-        const embed = spotifyEmbedUrl(input);
-        if (!embed) { status.innerText = "Lien Spotify non reconnu. Copie un lien depuis Partager → Copier le lien."; return; }
-        spotifyUrl = input;
-        localStorage.setItem('ultraSpotify', input);
-        status.innerText = "Playlist enregistrée.";
+        const url = urlEl.value.trim();
+        const name = nameEl.value.trim();
+        if (!url) { status.innerText = "Colle un lien Spotify."; return; }
+        if (!spotifyEmbedUrl(url)) { status.innerText = "Lien Spotify non reconnu (Partager → Copier le lien)."; return; }
+        playlists.push({ name: name || `Playlist ${playlists.length + 1}`, url });
+        savePlaylists();
+        urlEl.value = ''; nameEl.value = '';
+        status.innerText = "Playlist ajoutée.";
         setTimeout(() => { status.innerText = ""; }, 2000);
-        renderSpotifyPreview();
+        renderPlaylistManager();
     }
 
-    function renderSpotifyPreview() {
-        const box = document.getElementById('spotify-preview');
+    function removePlaylist(idx) {
+        playlists.splice(idx, 1);
+        savePlaylists();
+        renderPlaylistManager();
+    }
+
+    function renderPlaylistManager() {
+        const box = document.getElementById('spotify-list');
         if (!box) return;
-        const embed = spotifyEmbedUrl(spotifyUrl);
-        box.innerHTML = embed ? `<iframe src="${embed}" width="100%" height="152" frameborder="0" allow="encrypted-media" style="border-radius:12px;"></iframe>` : '';
-        const input = document.getElementById('spotify-input');
-        if (input) input.value = spotifyUrl;
+        box.innerHTML = playlists.length ? playlists.map((p, i) => `
+            <div class="ex-row" style="padding:10px 12px;">
+                <div class="ex-row-info"><b>${p.name}</b></div>
+                <div class="ex-row-actions">
+                    <button class="mini-btn" onclick="removePlaylist(${i})">Retirer</button>
+                </div>
+            </div>`).join('') : `<div class="ex-row-sub" style="padding:6px 0;">Aucune playlist enregistrée.</div>`;
     }
 
-    // Injecte le lecteur dans le player (compact)
+    // Injecte le lecteur + sélecteur de playlist dans le player
     function renderPlayerMusic() {
         const box = document.getElementById('player-music');
         if (!box) return;
-        const embed = spotifyEmbedUrl(spotifyUrl);
-        box.innerHTML = embed ? `<iframe src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '';
+        if (!playlists.length) { box.innerHTML = ''; return; }
+        if (activePlaylistIdx >= playlists.length) activePlaylistIdx = 0;
+        const embed = spotifyEmbedUrl(playlists[activePlaylistIdx].url);
+        const selector = playlists.length > 1 ? `
+            <div class="music-tabs">
+                ${playlists.map((p, i) => `<button class="music-tab${i === activePlaylistIdx ? ' active' : ''}" onclick="setPlayerPlaylist(${i})">${p.name}</button>`).join('')}
+            </div>` : '';
+        box.innerHTML = selector + (embed ? `<iframe src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '');
+    }
+
+    function setPlayerPlaylist(idx) {
+        activePlaylistIdx = idx;
+        renderPlayerMusic();
     }
 
     // === IMAGE RÉSUMÉ DE SÉANCE (story 1080x1920) ===
