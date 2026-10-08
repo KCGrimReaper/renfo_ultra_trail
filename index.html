@@ -755,6 +755,11 @@
             </div>
         </div>
         <div class="card">
+            <div class="day-header" style="grid-column:auto; margin-top:0;">Strava</div>
+            <div id="strava-box" style="margin-top:12px;"></div>
+            <div id="strava-status" style="font-weight:700; font-size:0.8rem; margin-top:8px;"></div>
+        </div>
+        <div class="card">
             <div class="day-header" style="grid-column:auto; margin-top:0;">Musique</div>
             <p style="font-weight:600; margin-top:12px;">Ajoute une ou plusieurs playlists Spotify à écouter pendant la séance guidée. Dans Spotify : Partager → Copier le lien.</p>
             <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
@@ -1402,6 +1407,8 @@
         goHome();
         // Propose l'image résumé à partager (avec durée réelle + FC)
         openSessionImage({ t: s.t, ex: s.ex, comp: comp.counts, realSec: entry.realSec, hr: entry.hr });
+        // Publication auto sur Strava si activée
+        if (stravaAuto && strava && strava.refresh_token) publishToStrava(entry, true);
         // Réinitialise le chrono
         clearInterval(clockTimer); sessionStartTs = null;
         setTimeout(() => { sessionDoneLock = false; }, 1500);
@@ -1535,7 +1542,7 @@
         if(screenId === 'builder-screen') renderBuilderSession();
         if(screenId === 'exercises-screen') renderExerciseManager();
         if(screenId === 'history-screen') renderHistoryScreen();
-        if(screenId === 'settings-screen') { renderAmbiancePicker(); renderPlaylistManager(); }
+        if(screenId === 'settings-screen') { renderAmbiancePicker(); renderPlaylistManager(); renderStravaSettings(); }
         window.scrollTo(0, 0);
     }
 
@@ -2552,6 +2559,132 @@
         return { start, end };
     }
 
+    // === STRAVA (connexion + publication activité musculation) ===
+    const STRAVA_FN = '/.netlify/functions/strava';
+    const STRAVA_RELAY = 'https://threadmill-mate.netlify.app/strava-renfo/'; // relais dans TMM
+    let strava = JSON.parse(localStorage.getItem('ultraStrava') || 'null'); // { refresh_token, athlete }
+    let stravaAuto = localStorage.getItem('ultraStravaAuto') === '1';
+
+    function saveStrava(t) { strava = t; localStorage.setItem('ultraStrava', JSON.stringify(t)); }
+
+    function stravaConnect() {
+        // redirect_uri = relais TMM (seul domaine autorisé par Strava) ; state porte l'URL de retour Renfo
+        const back = location.origin + location.pathname;
+        const state = 'renfo:' + encodeURIComponent(back);
+        const url = 'https://www.strava.com/oauth/authorize'
+            + '?client_id=277538&response_type=code'
+            + '&redirect_uri=' + encodeURIComponent(STRAVA_RELAY)
+            + '&approval_prompt=auto&scope=activity:write'
+            + '&state=' + state;
+        location.href = url;
+    }
+
+    function stravaLogout() {
+        localStorage.removeItem('ultraStrava');
+        strava = null;
+        renderStravaSettings();
+    }
+
+    // Au chargement : si on revient de Strava avec ?code=..., on l'échange
+    async function handleStravaReturn() {
+        const params = new URLSearchParams(location.search);
+        const code = params.get('code');
+        const scope = params.get('scope');
+        if (!code) return;
+        // Nettoie l'URL (retire code/scope/state)
+        const clean = location.origin + location.pathname;
+        history.replaceState({}, '', clean);
+        if (!scope || scope.indexOf('activity:write') === -1) {
+            setStravaStatus("Connexion Strava : autorisation d'écriture refusée.", true);
+            return;
+        }
+        try {
+            const r = await fetch(STRAVA_FN, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'exchange', code })
+            });
+            const j = await r.json();
+            if (j.refresh_token) {
+                saveStrava({ refresh_token: j.refresh_token, athlete: j.athlete || null });
+                setStravaStatus('Strava connecté' + (j.athlete && j.athlete.firstname ? ' · ' + j.athlete.firstname : ''), false);
+            } else {
+                setStravaStatus('Strava : échec de connexion.', true);
+            }
+        } catch (e) { setStravaStatus('Strava : ' + e, true); }
+        renderStravaSettings();
+    }
+
+    function setStravaStatus(msg, isError) {
+        const el = document.getElementById('strava-status');
+        if (el) { el.innerText = msg; el.style.color = isError ? '#c0392b' : 'var(--wood)'; }
+    }
+
+    // Publie une séance sur Strava. 'entry' = objet d'historique (ou séance courante)
+    async function publishToStrava(entry, silent) {
+        if (!strava || !strava.refresh_token) { if (!silent) setStravaStatus('Connecte Strava d\'abord.', true); return; }
+        const durationSec = entry.realSec || (entry.ex ? estimateListMinutes(entry.ex) * 60 : 1800);
+        let desc = '';
+        if (entry.exos && entry.exos.length) desc = entry.exos.map(e => '· ' + e.n).join('\n');
+        else if (entry.ex && entry.ex.length) desc = entry.ex.map(e => '· ' + cleanName(e.n)).join('\n');
+        if (entry.hr) desc += `\n\nFC moy ${entry.hr.avg} · max ${entry.hr.max}`;
+        desc += '\n\nvia Renfo Ultra-Trail';
+        const startLocal = (entry.date ? new Date(entry.date + 'T12:00:00') : new Date()).toISOString();
+
+        if (!silent) setStravaStatus('Publication sur Strava…', false);
+        try {
+            const r = await fetch(STRAVA_FN, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'create',
+                    refresh_token: strava.refresh_token,
+                    name: entry.title || entry.t || 'Renforcement musculaire',
+                    elapsed_time: durationSec,
+                    start_date_local: startLocal,
+                    description: desc
+                })
+            });
+            const j = await r.json();
+            if (j.refresh_token && j.refresh_token !== strava.refresh_token) {
+                strava.refresh_token = j.refresh_token; saveStrava(strava);
+            }
+            if (j.activity && j.activity.id) {
+                if (!silent) setStravaStatus('Séance publiée sur Strava ✓', false);
+                return true;
+            } else {
+                if (!silent) setStravaStatus('Strava : ' + (j.activity && j.activity.message ? j.activity.message : 'échec de publication'), true);
+                return false;
+            }
+        } catch (e) { if (!silent) setStravaStatus('Strava : ' + e, true); return false; }
+    }
+
+    function toggleStravaAuto() {
+        stravaAuto = !stravaAuto;
+        localStorage.setItem('ultraStravaAuto', stravaAuto ? '1' : '0');
+        renderStravaSettings();
+    }
+
+    function renderStravaSettings() {
+        const box = document.getElementById('strava-box');
+        if (!box) return;
+        if (strava && strava.refresh_token) {
+            const who = strava.athlete && strava.athlete.firstname ? ' (' + strava.athlete.firstname + ')' : '';
+            box.innerHTML = `
+                <p style="font-weight:600;">Connecté à Strava${who}. Tes séances terminées peuvent être publiées comme activité « Musculation ».</p>
+                <label class="share-opt" style="padding:4px 0;"><input type="checkbox" ${stravaAuto ? 'checked' : ''} onchange="toggleStravaAuto()"> <span>Publier automatiquement à la fin de chaque séance</span></label>
+                <div class="settings-row" style="margin-top:10px;">
+                    <button class="toggle-btn" onclick="stravaLogout()">Déconnecter Strava</button>
+                </div>`;
+        } else {
+            box.innerHTML = `
+                <p style="font-weight:600;">Connecte ton compte Strava pour publier tes séances de renfo comme activité « Musculation » (nom, durée réelle, FC).</p>
+                <div class="settings-row" style="margin-top:10px;">
+                    <button class="nav-btn" onclick="stravaConnect()">Se connecter avec Strava</button>
+                </div>`;
+        }
+        const st = document.getElementById('strava-status');
+        if (st) st.innerText = st.innerText || '';
+    }
+
     // === MUSIQUE SPOTIFY (lecteur intégré, plusieurs playlists) ===
     let playlists = JSON.parse(localStorage.getItem('ultraPlaylists') || '[]'); // [{name, url}]
     let activePlaylistIdx = 0;
@@ -3219,6 +3352,7 @@
                             <span class="hist-date">${fmtHistDate(h.date)}</span>
                             <span class="hist-title">${h.title} ${tag}</span>
                             <button class="mini-btn" onclick="shareHistoryEntry(${idx})">Image</button>
+                            <button class="mini-btn" onclick="publishHistoryToStrava(${idx})">Strava</button>
                             ${getData(h.id) ? `<button class="mini-btn" onclick="openSession('${h.id}')">Relancer</button>` : ""}
                             <button class="mini-btn" id="del-hist-${idx}" onclick="deleteHistoryEntry(${idx})">Supprimer</button>
                             ${subHtml}
@@ -3235,6 +3369,21 @@
         });
         renderCompositionBar('history-comp-bar', 'history-comp-legend', allEx.length ? allEx : CAT_LIST.map(c => ({ cat: c, _empty: true })));
         if (allEx.length === 0) { document.getElementById('history-comp-bar').innerHTML = `<div class="empty-hint" style="flex-grow:1;">Pas encore de données</div>`; }
+    }
+
+    function publishHistoryToStrava(idx) {
+        const h = history[idx];
+        if (!h) return;
+        if (!strava || !strava.refresh_token) {
+            switchScreen('settings-screen');
+            setTimeout(() => setStravaStatus('Connecte Strava ci-dessus, puis réessaie.', true), 100);
+            return;
+        }
+        publishToStrava(h, false).then(ok => {
+            // Petit retour visuel via le statut réglages (ou alerte légère)
+            const el = document.getElementById('history-strava-msg');
+            if (el) el.innerText = ok ? 'Publié sur Strava ✓' : 'Échec publication Strava';
+        });
     }
 
     function shareHistoryEntry(idx) {
@@ -3928,6 +4077,7 @@
     restoreBackupHandle();
     setAmbiance(currentAmbiance);
     preloadAmbiances();
+    handleStravaReturn(); // traite le retour OAuth Strava si ?code= présent
 
     // Exposition pour le module Firebase (chargé ensuite en type=module)
     window.applyCloudState = applyCloudState;
