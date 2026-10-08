@@ -848,7 +848,7 @@
 <div id="strava-modal">
     <div id="strava-modal-icon"></div>
     <h3 id="strava-modal-title">Publication Strava</h3>
-    <p id="strava-modal-msg" style="color:var(--stone); font-weight:600; line-height:1.5; word-break:break-word; max-height:200px; overflow-y:auto; font-size:0.82rem; text-align:left;"></p>
+    <p id="strava-modal-msg" style="color:var(--stone); font-weight:600; line-height:1.5;"></p>
     <div id="strava-modal-img-hint" style="display:none; background:var(--bg); border-radius:10px; padding:12px; font-size:0.85rem; color:var(--ink); font-weight:600; margin:14px 0; line-height:1.5;">
         💡 Strava n'autorise pas l'ajout automatique de l'image. Télécharge-la et ajoute-la à ton activité depuis l'app Strava (bouton photo sur l'activité).
     </div>
@@ -2592,15 +2592,7 @@
     const STRAVA_RELAY = 'https://threadmill-mate.netlify.app/strava-renfo/'; // relais dans TMM
     let strava = JSON.parse(localStorage.getItem('ultraStrava') || 'null'); // { refresh_token, athlete }
     let stravaAuto = localStorage.getItem('ultraStravaAuto') === '1';
-    let stravaSport = localStorage.getItem('ultraStravaSport') || 'Workout'; // Workout | Crossfit | WeightTraining
     let lastStravaError = '';
-
-    const STRAVA_SPORT_LABELS = { Workout: 'Entraînement', Crossfit: 'Entraînement en circuit', WeightTraining: 'Musculation' };
-
-    function setStravaSport(v) {
-        stravaSport = v;
-        localStorage.setItem('ultraStravaSport', v);
-    }
 
     function saveStrava(t) { strava = t; localStorage.setItem('ultraStrava', JSON.stringify(t)); }
 
@@ -2675,7 +2667,7 @@
                     action: 'create',
                     refresh_token: strava.refresh_token,
                     name: entry.title || entry.t || 'Renforcement musculaire',
-                    sport_type: stravaSport,
+                    sport_type: 'Workout',
                     elapsed_time: durationSec,
                     start_date_local: startLocal,
                     description: desc
@@ -2686,25 +2678,22 @@
                 strava.refresh_token = j.refresh_token; saveStrava(strava);
             }
             const act = j.activity || {};
-            if (act.id) {
+            // Succès : activité créée (id présent) OU statut HTTP de Strava dans les 2xx
+            if (act.id || (j.strava_status >= 200 && j.strava_status < 300)) {
                 if (!silent) setStravaStatus('Séance publiée sur Strava ✓', false);
                 return true;
             }
-            // Doublon (déjà publiée)
+            // Doublon (déjà publiée) : on considère que c'est OK (l'activité existe)
             if (j.strava_status === 409) {
-                if (!silent) setStravaStatus('Cette séance semble déjà publiée sur Strava.', true);
-                return false;
+                lastStravaError = 'Cette séance était déjà sur Strava.';
+                if (!silent) setStravaStatus(lastStravaError, false);
+                return true;
             }
-            // Message d'erreur détaillé de Strava
-            let msg = 'échec de publication';
-            if (j.strava_status === 409) msg = 'Cette séance semble déjà publiée sur Strava.';
-            else {
-                if (act.message) msg = act.message;
-                if (act.errors && act.errors.length) msg += ' — ' + act.errors.map(e => `${e.field}: ${e.code}`).join(', ');
-                if (j.error) msg = j.error;
-            }
-            // DIAGNOSTIC : réponse brute (à retirer une fois réglé)
-            msg += ' [HTTP ' + (j.strava_status || '?') + '] ' + JSON.stringify(j).slice(0, 300);
+            // Message d'erreur
+            let msg = 'Strava a refusé la publication.';
+            if (act.message) msg = act.message;
+            if (act.errors && act.errors.length) msg += ' (' + act.errors.map(e => `${e.field}: ${e.code}`).join(', ') + ')';
+            if (j.error) msg = j.error;
             lastStravaError = msg;
             if (!silent) setStravaStatus('Strava : ' + msg, true);
             console.log('Strava réponse complète :', j);
@@ -2724,13 +2713,7 @@
         if (strava && strava.refresh_token) {
             const who = strava.athlete && strava.athlete.firstname ? ' (' + strava.athlete.firstname + ')' : '';
             box.innerHTML = `
-                <p style="font-weight:600;">Connecté à Strava${who}. Tes séances terminées peuvent être publiées sur Strava.</p>
-                <div class="modal-field" style="margin-top:8px;">
-                    <label>Type d'activité Strava</label>
-                    <div class="chip-row" style="margin-bottom:0;">
-                        ${Object.keys(STRAVA_SPORT_LABELS).map(k => `<div class="chip${stravaSport === k ? ' active' : ''}" onclick="setStravaSport('${k}'); renderStravaSettings();">${STRAVA_SPORT_LABELS[k]}</div>`).join('')}
-                    </div>
-                </div>
+                <p style="font-weight:600;">Connecté à Strava${who}. Tes séances sont publiées comme activité « Entraînement ».</p>
                 <label class="share-opt" style="padding:8px 0;"><input type="checkbox" ${stravaAuto ? 'checked' : ''} onchange="toggleStravaAuto()"> <span>Publier automatiquement à la fin de chaque séance</span></label>
                 <div class="settings-row" style="margin-top:10px;">
                     <button class="toggle-btn" onclick="stravaLogout()">Déconnecter Strava</button>
