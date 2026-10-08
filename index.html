@@ -463,8 +463,16 @@
         .player-music { margin: 0 auto; max-width: 480px; width: 100%; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease; }
         .player-music.open { max-height: 200px; opacity: 1; margin: 0 auto 12px; }
         .player-music iframe { display: block; }
-        .music-dropdown { width: 100%; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 9px 12px; font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; cursor: pointer; }
-        .music-dropdown option { color: var(--ink); }
+        /* Dropdown custom des playlists (style Spotify) */
+        .music-dd { position: relative; margin-bottom: 8px; }
+        .music-dd-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 10px 14px; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+        .music-dd-btn:hover { background: rgba(255,255,255,0.16); }
+        .music-dd-btn svg { width: 16px; height: 16px; stroke: rgba(255,255,255,0.7); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; transition: transform 0.2s; }
+        .music-dd-menu { position: absolute; top: calc(100% + 5px); left: 0; right: 0; z-index: 40; background: rgba(28,24,20,0.98); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 6px; display: none; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+        .music-dd-menu.open { display: block; }
+        .music-dd-item { display: block; width: 100%; text-align: left; background: none; border: none; color: rgba(255,255,255,0.8); font-weight: 700; font-size: 0.85rem; padding: 10px 12px; border-radius: 7px; cursor: pointer; }
+        .music-dd-item:hover { background: rgba(255,255,255,0.1); }
+        .music-dd-item.active { background: var(--sand); color: var(--ink); }
         .music-title { color: rgba(255,255,255,0.7); font-weight: 700; font-size: 0.8rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         /* Menu d'ambiance du player */
         .player-amb-wrap { position: relative; flex-shrink: 0; }
@@ -2616,14 +2624,27 @@
         if (!box || !playlists.length) return;
         if (activePlaylistIdx >= playlists.length) activePlaylistIdx = 0;
         const embed = spotifyEmbedUrl(playlists[activePlaylistIdx].url);
-        const selector = playlists.length > 1 ? `
-            <select class="music-dropdown" onchange="setPlayerPlaylist(this.value)">
-                ${playlists.map((p, i) => `<option value="${i}"${i === activePlaylistIdx ? ' selected' : ''}>${p.name}</option>`).join('')}
-            </select>` : `<div class="music-title">${playlists[0].name}</div>`;
-        box.innerHTML = selector + (embed ? `<iframe id="music-iframe" src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '');
+        // En-tête : dropdown custom (si plusieurs playlists) ou simple titre
+        const header = playlists.length > 1 ? `
+            <div class="music-dd" id="music-dd">
+                <button class="music-dd-btn" onclick="toggleMusicDropdown(event)">
+                    <span>${playlists[activePlaylistIdx].name}</span>
+                    <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="music-dd-menu" id="music-dd-menu">
+                    ${playlists.map((p, i) => `<button class="music-dd-item${i === activePlaylistIdx ? ' active' : ''}" onclick="setPlayerPlaylist(${i})">${p.name}</button>`).join('')}
+                </div>
+            </div>` : `<div class="music-title">${playlists[0].name}</div>`;
+        box.innerHTML = header + (embed ? `<iframe id="music-iframe" src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '');
     }
 
-    // Changer de playlist recharge forcément l'iframe (nouvelle source)
+    function toggleMusicDropdown(ev) {
+        if (ev) ev.stopPropagation();
+        const menu = document.getElementById('music-dd-menu');
+        if (menu) menu.classList.toggle('open');
+    }
+
+    // Changer de playlist recharge l'iframe (nouvelle source)
     function setPlayerPlaylist(idx) {
         activePlaylistIdx = +idx;
         renderPlayerMusic();
@@ -3814,6 +3835,11 @@
         const ambMenu = document.getElementById('player-amb-menu');
         if (ambMenu && ambMenu.classList.contains('open') && !e.target.closest('.player-amb-wrap')) {
             ambMenu.classList.remove('open');
+        }
+        // Ferme le dropdown playlist si clic à l'extérieur
+        const ddMenu = document.getElementById('music-dd-menu');
+        if (ddMenu && ddMenu.classList.contains('open') && !e.target.closest('.music-dd')) {
+            ddMenu.classList.remove('open');
         }
     });
 
