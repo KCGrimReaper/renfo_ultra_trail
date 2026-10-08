@@ -2592,7 +2592,15 @@
     const STRAVA_RELAY = 'https://threadmill-mate.netlify.app/strava-renfo/'; // relais dans TMM
     let strava = JSON.parse(localStorage.getItem('ultraStrava') || 'null'); // { refresh_token, athlete }
     let stravaAuto = localStorage.getItem('ultraStravaAuto') === '1';
+    let stravaSport = localStorage.getItem('ultraStravaSport') || 'Workout'; // Workout | Crossfit | WeightTraining
     let lastStravaError = '';
+
+    const STRAVA_SPORT_LABELS = { Workout: 'Entraînement', Crossfit: 'Entraînement en circuit', WeightTraining: 'Musculation' };
+
+    function setStravaSport(v) {
+        stravaSport = v;
+        localStorage.setItem('ultraStravaSport', v);
+    }
 
     function saveStrava(t) { strava = t; localStorage.setItem('ultraStrava', JSON.stringify(t)); }
 
@@ -2667,6 +2675,7 @@
                     action: 'create',
                     refresh_token: strava.refresh_token,
                     name: entry.title || entry.t || 'Renforcement musculaire',
+                    sport_type: stravaSport,
                     elapsed_time: durationSec,
                     start_date_local: startLocal,
                     description: desc
@@ -2715,8 +2724,14 @@
         if (strava && strava.refresh_token) {
             const who = strava.athlete && strava.athlete.firstname ? ' (' + strava.athlete.firstname + ')' : '';
             box.innerHTML = `
-                <p style="font-weight:600;">Connecté à Strava${who}. Tes séances terminées peuvent être publiées comme activité « Musculation ».</p>
-                <label class="share-opt" style="padding:4px 0;"><input type="checkbox" ${stravaAuto ? 'checked' : ''} onchange="toggleStravaAuto()"> <span>Publier automatiquement à la fin de chaque séance</span></label>
+                <p style="font-weight:600;">Connecté à Strava${who}. Tes séances terminées peuvent être publiées sur Strava.</p>
+                <div class="modal-field" style="margin-top:8px;">
+                    <label>Type d'activité Strava</label>
+                    <div class="chip-row" style="margin-bottom:0;">
+                        ${Object.keys(STRAVA_SPORT_LABELS).map(k => `<div class="chip${stravaSport === k ? ' active' : ''}" onclick="setStravaSport('${k}'); renderStravaSettings();">${STRAVA_SPORT_LABELS[k]}</div>`).join('')}
+                    </div>
+                </div>
+                <label class="share-opt" style="padding:8px 0;"><input type="checkbox" ${stravaAuto ? 'checked' : ''} onchange="toggleStravaAuto()"> <span>Publier automatiquement à la fin de chaque séance</span></label>
                 <div class="settings-row" style="margin-top:10px;">
                     <button class="toggle-btn" onclick="stravaLogout()">Déconnecter Strava</button>
                 </div>`;

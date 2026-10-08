@@ -44,9 +44,10 @@ export async function handler(event) {
 
       const params = new URLSearchParams();
       params.append('name', b.name || 'Renforcement musculaire');
-      // L'API /activities attend 'type' (WeightTraining = Musculation). 'sport_type' est aussi envoyé pour compat.
-      params.append('type', 'WeightTraining');
-      params.append('sport_type', 'WeightTraining');
+      // Type d'activité : Workout (Entraînement), Crossfit (Entraînement en circuit), WeightTraining (Musculation)
+      const sport = ['Workout', 'Crossfit', 'WeightTraining'].includes(b.sport_type) ? b.sport_type : 'Workout';
+      params.append('type', sport);
+      params.append('sport_type', sport);
       params.append('start_date_local', b.start_date_local || new Date().toISOString());
       params.append('elapsed_time', String(b.elapsed_time || 1800)); // secondes
       if (b.description) params.append('description', b.description);
