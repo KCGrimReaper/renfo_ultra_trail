@@ -848,7 +848,7 @@
 <div id="strava-modal">
     <div id="strava-modal-icon"></div>
     <h3 id="strava-modal-title">Publication Strava</h3>
-    <p id="strava-modal-msg" style="color:var(--stone); font-weight:600; line-height:1.5;"></p>
+    <p id="strava-modal-msg" style="color:var(--stone); font-weight:600; line-height:1.5; word-break:break-word; max-height:200px; overflow-y:auto; font-size:0.82rem; text-align:left;"></p>
     <div id="strava-modal-img-hint" style="display:none; background:var(--bg); border-radius:10px; padding:12px; font-size:0.85rem; color:var(--ink); font-weight:600; margin:14px 0; line-height:1.5;">
         💡 Strava n'autorise pas l'ajout automatique de l'image. Télécharge-la et ajoute-la à ton activité depuis l'app Strava (bouton photo sur l'activité).
     </div>
@@ -2694,6 +2694,8 @@
                 if (act.errors && act.errors.length) msg += ' — ' + act.errors.map(e => `${e.field}: ${e.code}`).join(', ');
                 if (j.error) msg = j.error;
             }
+            // DIAGNOSTIC : réponse brute (à retirer une fois réglé)
+            msg += ' [HTTP ' + (j.strava_status || '?') + '] ' + JSON.stringify(j).slice(0, 300);
             lastStravaError = msg;
             if (!silent) setStravaStatus('Strava : ' + msg, true);
             console.log('Strava réponse complète :', j);
