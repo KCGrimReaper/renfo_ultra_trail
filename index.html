@@ -299,21 +299,36 @@
         .ex-stat .es-lab { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-top: 4px; letter-spacing: 0.3px; }
 
         /* Options de l'image de partage */
-        .share-options { display: flex; flex-direction: column; gap: 4px; text-align: left; max-width: 320px; margin: 0 auto; padding: 0 20px; }
-        .share-opt { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; color: var(--ink); cursor: pointer; padding: 6px 0; }
-        .share-opt input { width: 18px; height: 18px; accent-color: var(--ink); cursor: pointer; }
-        .share-subopt { display: flex; gap: 18px; padding: 2px 0 6px 30px; }
+        /* Sheet de partage : image à gauche, config à droite (desktop) ; empilé (mobile) */
+        .share-layout { display: flex; gap: 24px; padding: 4px 24px 24px; align-items: flex-start; }
+        .share-preview { flex-shrink: 0; width: 240px; position: sticky; top: 0; }
+        .share-preview img { width: 100%; border-radius: 14px; box-shadow: 0 6px 24px rgba(43,38,32,0.3); display: block; }
+        .share-config { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+        .share-section-title { font-weight: 900; font-size: 0.72rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.5px; margin-bottom: 10px; }
+        .share-opt { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; color: var(--ink); cursor: pointer; padding: 7px 0; }
+        .share-opt input[type=checkbox] { width: 19px; height: 19px; accent-color: var(--ink); cursor: pointer; flex-shrink: 0; }
+        .share-subopt { display: flex; gap: 18px; padding: 2px 0 8px 29px; }
         .share-subopt label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--stone); cursor: pointer; }
         .share-subopt input { accent-color: var(--ink); cursor: pointer; }
-        .share-theme-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-        .theme-chip { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 6px 14px; font-weight: 700; font-size: 0.78rem; cursor: pointer; color: var(--ink); }
+        .share-theme-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        .theme-chip { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 7px 16px; font-weight: 700; font-size: 0.8rem; cursor: pointer; color: var(--ink); }
         .theme-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+        .share-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        @media (max-width: 640px) {
+            .share-layout { flex-direction: column; align-items: center; gap: 18px; padding: 4px 18px 24px; }
+            .share-preview { position: static; width: 200px; }
+            .share-config { width: 100%; }
+            .share-actions { justify-content: stretch; }
+            .share-actions .action-btn { flex: 1; justify-content: center; }
+        }
         .ambiance-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap:12px; margin:10px 0 5px; }
         .ambiance-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio: 4/3; border:2px solid transparent; background: var(--bg); }
         .ambiance-item img { width:100%; height:100%; object-fit:cover; display:block; }
         .ambiance-item.selected { border-color: var(--ink); }
         .ambiance-item.selected::after { content:"✓"; position:absolute; top:4px; right:6px; background: var(--ink); color:#fff; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:900; }
         .ambiance-item .amb-label { position:absolute; bottom:0; left:0; right:0; background: linear-gradient(transparent, rgba(43,38,32,0.85)); color:#fff; font-size:0.6rem; font-weight:800; text-transform:uppercase; padding:12px 6px 5px; letter-spacing:0.5px; }
+        .ambiance-item .amb-del { position:absolute; top:4px; left:4px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(43,38,32,0.7); color:#fff; font-size:0.7rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:2; }
+        .ambiance-item .amb-del:hover { background:#c0392b; }
         .ambiance-item.neutral { display:flex; align-items:center; justify-content:center; background: linear-gradient(160deg, var(--ink), var(--wood)); color:var(--sand); font-size:0.65rem; font-weight:800; text-transform:uppercase; text-align:center; }
 
         /* --- BOTTOM BAR (pilule flottante) --- */
@@ -444,10 +459,11 @@
         .player-rest { font-size: 3.4rem; font-weight: 900; font-family: 'Courier New', monospace; color: #fff; display: none; }
         .player-rest.on { display: block; }
 
-        .player-music { margin: 0 0 12px; }
+        .player-music { margin: 0 auto 12px; max-width: 480px; width: 100%; }
         .player-music iframe { display: block; }
-        .music-select { width: 100%; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; cursor: pointer; }
-        .music-select option { color: var(--ink); }
+        .music-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+        .music-chip { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.22); border-radius: 16px; padding: 5px 13px; font-weight: 700; font-size: 0.72rem; cursor: pointer; }
+        .music-chip.active { background: var(--sand); color: var(--ink); border-color: var(--sand); }
         .music-title { color: rgba(255,255,255,0.7); font-weight: 700; font-size: 0.8rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         .player-bottom { display: flex; flex-direction: column; gap: 14px; }
         .player-rest-inline { display: flex; gap: 8px; justify-content: center; }
@@ -705,8 +721,22 @@
         </div>
         <div class="card">
             <div class="day-header" style="grid-column:auto; margin-top:0;">Ambiance par défaut</div>
-            <p style="font-weight:600; margin-top:12px;">Choisis l'ambiance affichée en fond pendant la séance guidée. "Neutre" garde un fond sobre.</p>
+            <p style="font-weight:600; margin-top:12px;">Choisis l'ambiance affichée en fond pendant la séance guidée. "Neutre" garde un fond sobre. Chaque ambiance photo est aussi proposée comme fond pour l'image de fin de séance.</p>
             <div class="ambiance-grid" id="ambiance-grid"></div>
+            <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
+                <div style="font-weight:800; font-size:0.75rem; text-transform:uppercase; color:var(--muted); margin-bottom:10px;">Ajouter une ambiance</div>
+                <input type="text" id="amb-name" class="text-input" placeholder="Nom (ex : Forêt, Sommet, Salle)" style="margin-bottom:10px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <input type="text" id="amb-url" class="text-input" style="flex-grow:1;" placeholder="URL d'image (https://...)">
+                    <button class="toggle-btn" onclick="addAmbianceUrl()">Ajouter</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button class="toggle-btn" onclick="document.getElementById('amb-file').click()">Importer une image</button>
+                    <input type="file" id="amb-file" accept="image/*" style="display:none" onchange="addAmbianceFile(event)">
+                    <span style="font-size:0.75rem; color:var(--muted);">JPG/PNG, compressée automatiquement</span>
+                </div>
+                <div id="amb-status" style="font-weight:700; font-size:0.8rem; margin-top:8px; color:var(--wood);"></div>
+            </div>
         </div>
         <div class="card">
             <div class="day-header" style="grid-column:auto; margin-top:0;">Musique</div>
@@ -790,38 +820,40 @@
             <button class="sheet-close" onclick="closeShareSheet()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
     </div>
-    <div class="sheet-body" style="text-align:center;">
-        <img id="share-img" alt="Résumé de séance" style="max-width:240px; width:100%; border-radius:14px; box-shadow:0 6px 24px rgba(43,38,32,0.3); margin:0 auto 16px;">
-        <div style="padding:0 20px 4px;">
-            <label style="font-weight:800; font-size:0.7rem; text-transform:uppercase; color:var(--muted); letter-spacing:0.5px;">Ambiance</label>
-            <div class="share-theme-row" id="share-theme-row">
-                <button class="theme-chip active" data-theme="dark" onclick="setShareTheme('dark')">Sombre</button>
-                <button class="theme-chip" data-theme="light" onclick="setShareTheme('light')">Clair</button>
-                <button class="theme-chip" data-theme="chalet" onclick="setShareTheme('chalet')">Chalet</button>
-                <button class="theme-chip" data-theme="noir" onclick="setShareTheme('noir')">Noir</button>
+    <div class="sheet-body">
+        <div class="share-layout">
+            <div class="share-preview">
+                <img id="share-img" alt="Résumé de séance">
             </div>
-        </div>
-        <div class="share-options" id="share-options">
-            <label class="share-opt"><input type="checkbox" id="opt-repartition" checked onchange="refreshShareImage()"> Répartition par catégorie</label>
-            <div class="share-subopt" id="repartition-style-opt">
-                <label><input type="radio" name="rep-style" value="bar" checked onchange="refreshShareImage()"> Barre</label>
-                <label><input type="radio" name="rep-style" value="donut" onchange="refreshShareImage()"> Cercle</label>
+            <div class="share-config">
+                <div class="share-section">
+                    <div class="share-section-title">Ambiance</div>
+                    <div class="share-theme-row" id="share-theme-row"></div>
+                </div>
+                <div class="share-section">
+                    <div class="share-section-title">Contenu</div>
+                    <label class="share-opt"><input type="checkbox" id="opt-repartition" checked onchange="refreshShareImage()"> <span>Répartition par catégorie</span></label>
+                    <div class="share-subopt" id="repartition-style-opt">
+                        <label><input type="radio" name="rep-style" value="bar" checked onchange="refreshShareImage()"> Barre</label>
+                        <label><input type="radio" name="rep-style" value="donut" onchange="refreshShareImage()"> Cercle</label>
+                    </div>
+                    <label class="share-opt"><input type="checkbox" id="opt-exos" checked onchange="refreshShareImage()"> <span>Liste des exercices</span></label>
+                    <label class="share-opt"><input type="checkbox" id="opt-reps" checked onchange="refreshShareImage()"> <span>Reps à côté des exercices</span></label>
+                    <label class="share-opt"><input type="checkbox" id="opt-materiel" onchange="refreshShareImage()"> <span>Matériel à côté des exercices</span></label>
+                    <label class="share-opt"><input type="checkbox" id="opt-duree" checked onchange="refreshShareImage()"> <span>Durée</span></label>
+                    <label class="share-opt"><input type="checkbox" id="opt-fc" checked onchange="refreshShareImage()"> <span>Fréquence cardiaque (si mesurée)</span></label>
+                </div>
+                <div class="share-actions">
+                    <button class="action-btn primary" onclick="shareSessionImage()">
+                        <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v14"/></svg>
+                        <span>Partager</span>
+                    </button>
+                    <a id="share-download" download="seance-renfo.png" class="action-btn" style="text-decoration:none;">
+                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        <span>Télécharger</span>
+                    </a>
+                </div>
             </div>
-            <label class="share-opt"><input type="checkbox" id="opt-exos" checked onchange="refreshShareImage()"> Liste des exercices</label>
-            <label class="share-opt"><input type="checkbox" id="opt-reps" checked onchange="refreshShareImage()"> Reps à côté des exercices</label>
-            <label class="share-opt"><input type="checkbox" id="opt-materiel" onchange="refreshShareImage()"> Matériel à côté des exercices</label>
-            <label class="share-opt"><input type="checkbox" id="opt-duree" checked onchange="refreshShareImage()"> Durée</label>
-            <label class="share-opt"><input type="checkbox" id="opt-fc" checked onchange="refreshShareImage()"> Fréquence cardiaque (si mesurée)</label>
-        </div>
-        <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:14px 20px 10px;">
-            <button class="action-btn primary" onclick="shareSessionImage()">
-                <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v14"/></svg>
-                <span>Partager</span>
-            </button>
-            <a id="share-download" download="seance-renfo.png" class="action-btn" style="text-decoration:none;">
-                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                <span>Télécharger</span>
-            </a>
         </div>
     </div>
 </div>
@@ -1357,35 +1389,119 @@
     }
 
     // --- NAVIGATION DE BASE ---
-    // Ambiances disponibles (id -> {label, url}). "neutral" = dégradé sobre.
-    const AMBIANCES = {
+    // Ambiances de base (en dur). "neutral" = dégradé sobre.
+    const BASE_AMBIANCES = {
         neutral: { label: "Neutre", url: null },
         chalet:  { label: "Chalet", url: "https://i.postimg.cc/HWZDhHbq/Gemini-Generated-Image-dype98dype98dype-(1)-(1).png" }
     };
-    let currentAmbiance = localStorage.getItem('ultraAmbiance') || 'chalet';
-    if (!AMBIANCES[currentAmbiance]) currentAmbiance = 'chalet';
+    // Ambiances personnalisées de l'utilisateur (ajoutées par URL ou upload), stockées
+    let customAmbiances = JSON.parse(localStorage.getItem('ultraCustomAmbiances') || '{}'); // { id: {label, url} }
 
-    // Précharge les images d'ambiance en mémoire pour un affichage instantané ensuite
+    // Vue combinée base + custom
+    function allAmbiances() {
+        return { ...BASE_AMBIANCES, ...customAmbiances };
+    }
+    // Compat : AMBIANCES référencé ailleurs → getter dynamique
+    const AMBIANCES = new Proxy({}, {
+        get(_, k) { return allAmbiances()[k]; },
+        has(_, k) { return k in allAmbiances(); },
+        ownKeys() { return Reflect.ownKeys(allAmbiances()); },
+        getOwnPropertyDescriptor(_, k) { const o = allAmbiances(); return k in o ? { enumerable: true, configurable: true, value: o[k] } : undefined; }
+    });
+
+    let currentAmbiance = localStorage.getItem('ultraAmbiance') || 'chalet';
+    if (!allAmbiances()[currentAmbiance]) currentAmbiance = 'chalet';
+
+    function saveCustomAmbiances() { localStorage.setItem('ultraCustomAmbiances', JSON.stringify(customAmbiances)); }
+
     function preloadAmbiances() {
-        Object.keys(AMBIANCES).forEach(id => {
-            const url = AMBIANCES[id].url;
+        const all = allAmbiances();
+        Object.keys(all).forEach(id => {
+            const url = all[id].url;
             if (url) { const img = new Image(); img.src = url; }
         });
     }
 
     function ambianceUrl() {
-        const a = AMBIANCES[currentAmbiance];
+        const a = allAmbiances()[currentAmbiance];
         return a && a.url ? a.url : null;
     }
 
     function setAmbiance(id) {
-        if (!AMBIANCES[id]) return;
+        if (!allAmbiances()[id]) return;
         currentAmbiance = id;
         localStorage.setItem('ultraAmbiance', id);
         const url = ambianceUrl();
         document.documentElement.style.setProperty('--ambiance-url', url ? `url('${url}')` : 'none');
         applyTrainingBg(document.getElementById('session-screen').classList.contains('active'));
         renderAmbiancePicker();
+    }
+
+    // Ajout d'une ambiance par URL
+    function addAmbianceUrl() {
+        const nameEl = document.getElementById('amb-name');
+        const urlEl = document.getElementById('amb-url');
+        const status = document.getElementById('amb-status');
+        const name = nameEl.value.trim();
+        const url = urlEl.value.trim();
+        if (!url) { status.innerText = "Colle une URL d'image."; return; }
+        if (!/^https?:\/\//.test(url)) { status.innerText = "URL invalide (doit commencer par http)."; return; }
+        const id = 'amb' + Date.now();
+        customAmbiances[id] = { label: name || 'Ambiance', url };
+        saveCustomAmbiances();
+        nameEl.value = ''; urlEl.value = '';
+        status.innerText = "Ambiance ajoutée.";
+        setTimeout(() => status.innerText = '', 2000);
+        renderAmbiancePicker();
+    }
+
+    // Ajout d'une ambiance par upload (compressée en JPEG base64)
+    function addAmbianceFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const status = document.getElementById('amb-status');
+        const name = (document.getElementById('amb-name').value.trim()) || file.name.replace(/\.[^.]+$/, '');
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                // Compression : redimensionne à max 1280px de large, JPEG qualité 0.78
+                const maxW = 1280;
+                const scale = Math.min(1, maxW / img.width);
+                const cv = document.createElement('canvas');
+                cv.width = Math.round(img.width * scale);
+                cv.height = Math.round(img.height * scale);
+                cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+                let dataUrl;
+                try { dataUrl = cv.toDataURL('image/jpeg', 0.78); }
+                catch (err) { status.innerText = "Erreur de traitement de l'image."; return; }
+                // Garde-fou quota : ~1.3 Mo max en base64
+                if (dataUrl.length > 1.8 * 1024 * 1024) { status.innerText = "Image trop lourde même compressée. Essaie une image plus petite."; return; }
+                const id = 'amb' + Date.now();
+                customAmbiances[id] = { label: name || 'Ambiance', url: dataUrl };
+                try {
+                    saveCustomAmbiances();
+                    document.getElementById('amb-name').value = '';
+                    status.innerText = "Ambiance ajoutée.";
+                    setTimeout(() => status.innerText = '', 2000);
+                    renderAmbiancePicker();
+                } catch (err) {
+                    delete customAmbiances[id];
+                    status.innerText = "Stockage plein. Supprime une ambiance ou une image plus légère.";
+                }
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        event.target.value = ''; // reset pour pouvoir re-uploader
+    }
+
+    function removeAmbiance(id) {
+        if (!customAmbiances[id]) return;
+        delete customAmbiances[id];
+        saveCustomAmbiances();
+        if (currentAmbiance === id) setAmbiance('neutral');
+        else renderAmbiancePicker();
     }
 
     function switchScreen(screenId) {
@@ -2489,9 +2605,9 @@
         if (activePlaylistIdx >= playlists.length) activePlaylistIdx = 0;
         const embed = spotifyEmbedUrl(playlists[activePlaylistIdx].url);
         const selector = playlists.length > 1 ? `
-            <select class="music-select" onchange="setPlayerPlaylist(this.value)">
-                ${playlists.map((p, i) => `<option value="${i}"${i === activePlaylistIdx ? ' selected' : ''}>${p.name}</option>`).join('')}
-            </select>` : `<div class="music-title">${playlists[0].name}</div>`;
+            <div class="music-chips">
+                ${playlists.map((p, i) => `<button class="music-chip${i === activePlaylistIdx ? ' active' : ''}" onclick="setPlayerPlaylist(${i})">${p.name}</button>`).join('')}
+            </div>` : `<div class="music-title">${playlists[0].name}</div>`;
         box.innerHTML = selector + (embed ? `<iframe src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '');
     }
 
@@ -2772,17 +2888,38 @@
 
     let shareTheme = 'dark';
 
-    // Palettes des thèmes d'image
-    const SHARE_THEMES = {
-        dark:  { bg1: PALETTE.ink, bg2: '#4a3a28', text: '#fff', accent: PALETTE.sand, sub: 'rgba(255,255,255,0.82)', photo: null },
-        light: { bg1: '#f2ede4', bg2: '#e0d7c6', text: PALETTE.ink, accent: PALETTE.wood, sub: 'rgba(43,38,32,0.7)', photo: null },
-        chalet:{ bg1: PALETTE.ink, bg2: '#4a3a28', text: '#fff', accent: PALETTE.sand, sub: 'rgba(255,255,255,0.82)', photo: AMBIANCES.chalet ? AMBIANCES.chalet.url : null },
-        noir:  { bg1: '#0a0a0a', bg2: '#1a1a1a', text: '#fff', accent: '#bbb', sub: 'rgba(255,255,255,0.7)', photo: null }
-    };
+    // Thèmes d'image : 3 de base + un par ambiance photo (base + custom)
+    function shareThemes() {
+        const themes = {
+            dark:  { label: 'Sombre', bg1: PALETTE.ink, bg2: '#4a3a28', text: '#fff', accent: PALETTE.sand, sub: 'rgba(255,255,255,0.82)', photo: null },
+            light: { label: 'Clair', bg1: '#f2ede4', bg2: '#e0d7c6', text: PALETTE.ink, accent: PALETTE.wood, sub: 'rgba(43,38,32,0.7)', photo: null },
+            noir:  { label: 'Noir', bg1: '#0a0a0a', bg2: '#1a1a1a', text: '#fff', accent: '#bbb', sub: 'rgba(255,255,255,0.7)', photo: null }
+        };
+        // Une entrée par ambiance ayant une photo
+        const all = allAmbiances();
+        Object.keys(all).forEach(id => {
+            if (all[id].url) {
+                themes['amb_' + id] = { label: all[id].label, bg1: PALETTE.ink, bg2: '#4a3a28', text: '#fff', accent: PALETTE.sand, sub: 'rgba(255,255,255,0.82)', photo: all[id].url };
+            }
+        });
+        return themes;
+    }
+    // Accès compat (lecture d'un thème par clé)
+    const SHARE_THEMES = new Proxy({}, { get(_, k) { return shareThemes()[k]; }, has(_, k) { return k in shareThemes(); } });
+
+    function renderShareThemeChips() {
+        const row = document.getElementById('share-theme-row');
+        if (!row) return;
+        const themes = shareThemes();
+        if (!themes[shareTheme]) shareTheme = 'dark';
+        row.innerHTML = Object.keys(themes).map(k =>
+            `<button class="theme-chip${k === shareTheme ? ' active' : ''}" data-theme="${k}" onclick="setShareTheme('${k}')">${themes[k].label}</button>`
+        ).join('');
+    }
 
     function setShareTheme(t) {
         shareTheme = t;
-        document.querySelectorAll('#share-theme-row .theme-chip').forEach(c => c.classList.toggle('active', c.dataset.theme === t));
+        renderShareThemeChips();
         renderShareCanvas();
     }
 
@@ -2790,6 +2927,7 @@
 
     function openSessionImage(session) {
         _shareSession = session;
+        renderShareThemeChips();
         renderShareCanvas();
         document.getElementById('sheet-overlay').classList.add('open');
         document.getElementById('share-sheet').classList.add('open');
@@ -3603,15 +3741,19 @@
     function renderAmbiancePicker() {
         const grid = document.getElementById('ambiance-grid');
         if (!grid) return;
-        grid.innerHTML = Object.keys(AMBIANCES).map(id => {
-            const a = AMBIANCES[id];
+        const all = allAmbiances();
+        grid.innerHTML = Object.keys(all).map(id => {
+            const a = all[id];
             const sel = id === currentAmbiance ? " selected" : "";
+            const isCustom = !!customAmbiances[id];
+            const delBtn = isCustom ? `<button class="amb-del" onclick="event.stopPropagation(); removeAmbiance('${id}')" aria-label="Supprimer">✕</button>` : '';
             if (!a.url) {
                 return `<div class="ambiance-item neutral${sel}" onclick="setAmbiance('${id}')">${a.label}</div>`;
             }
             return `<div class="ambiance-item${sel}" onclick="setAmbiance('${id}')">
                 <img src="${a.url}" alt="${a.label}" loading="lazy">
                 <span class="amb-label">${a.label}</span>
+                ${delBtn}
             </div>`;
         }).join("");
     }
