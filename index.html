@@ -2593,7 +2593,7 @@
         if (!code) return;
         // Nettoie l'URL (retire code/scope/state)
         const clean = location.origin + location.pathname;
-        history.replaceState({}, '', clean);
+        window.history.replaceState({}, '', clean);
         if (!scope || scope.indexOf('activity:write') === -1) {
             setStravaStatus("Connexion Strava : autorisation d'écriture refusée.", true);
             return;
