@@ -459,12 +459,20 @@
         .player-rest { font-size: 3.4rem; font-weight: 900; font-family: 'Courier New', monospace; color: #fff; display: none; }
         .player-rest.on { display: block; }
 
-        .player-music { margin: 0 auto 12px; max-width: 480px; width: 100%; }
+        /* Panneau masqué = hauteur 0 et invisible, MAIS l'iframe reste dans le DOM (musique continue) */
+        .player-music { margin: 0 auto; max-width: 480px; width: 100%; max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease; }
+        .player-music.open { max-height: 200px; opacity: 1; margin: 0 auto 12px; }
         .player-music iframe { display: block; }
-        .music-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-        .music-chip { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.22); border-radius: 16px; padding: 5px 13px; font-weight: 700; font-size: 0.72rem; cursor: pointer; }
-        .music-chip.active { background: var(--sand); color: var(--ink); border-color: var(--sand); }
+        .music-dropdown { width: 100%; background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; padding: 9px 12px; font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; cursor: pointer; }
+        .music-dropdown option { color: var(--ink); }
         .music-title { color: rgba(255,255,255,0.7); font-weight: 700; font-size: 0.8rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        /* Menu d'ambiance du player */
+        .player-amb-wrap { position: relative; flex-shrink: 0; }
+        .player-amb-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; background: rgba(20,17,14,0.96); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 6px; min-width: 150px; display: none; max-height: 260px; overflow-y: auto; }
+        .player-amb-menu.open { display: block; }
+        .amb-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: rgba(255,255,255,0.8); font-weight: 700; font-size: 0.82rem; padding: 9px 12px; border-radius: 7px; cursor: pointer; }
+        .amb-menu-item:hover { background: rgba(255,255,255,0.1); }
+        .amb-menu-item.active { background: var(--sand); color: var(--ink); }
         .player-bottom { display: flex; flex-direction: column; gap: 14px; }
         .player-rest-inline { display: flex; gap: 8px; justify-content: center; }
         .rest-chip { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 20px; padding: 7px 16px; font-weight: 800; cursor: pointer; font-size: 0.8rem; font-family: 'Courier New', monospace; }
@@ -944,9 +952,12 @@
                 <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
             </button>
             <div class="player-progress"><div class="player-progress-fill" id="player-progress-fill"></div></div>
-            <button class="player-icon-btn" onclick="togglePlayerBg()" id="player-bg-btn" aria-label="Fond">
-                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-6 6"/></svg>
-            </button>
+            <div class="player-amb-wrap">
+                <button class="player-icon-btn" onclick="togglePlayerBg()" id="player-bg-btn" aria-label="Ambiance">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-6 6"/></svg>
+                </button>
+                <div class="player-amb-menu" id="player-amb-menu"></div>
+            </div>
             <span class="player-counter" id="player-counter"></span>
         </div>
         <div class="player-body">
@@ -963,7 +974,7 @@
 
             <div class="player-next-preview" id="player-next-preview"></div>
         </div>
-        <div class="player-music" id="player-music" style="display:none;"></div>
+        <div class="player-music" id="player-music"></div>
         <div class="player-bottom">
             <div class="player-rest-inline" id="player-rest-inline">
                 <button class="rest-chip" onclick="startRest(30)">30s</button>
@@ -2581,36 +2592,38 @@
             </div>`).join('') : `<div class="ex-row-sub" style="padding:6px 0;">Aucune playlist enregistrée.</div>`;
     }
 
-    // Prépare le bouton musique du player (affiché seulement si des playlists existent)
+    // Prépare le bouton + le lecteur à l'ouverture du player.
+    // L'iframe est créée UNE fois ; masquer le panneau ne la détruit pas (musique continue).
     function initPlayerMusic() {
         const btn = document.getElementById('player-music-btn');
         const box = document.getElementById('player-music');
         if (btn) btn.style.display = playlists.length ? 'flex' : 'none';
-        if (box) box.style.display = 'none'; // masqué par défaut
+        if (!box) return;
+        box.classList.remove('open'); // panneau masqué par défaut (mais présent dans le DOM)
         if (playlists.length) renderPlayerMusic();
+        else box.innerHTML = '';
     }
 
+    // Affiche/masque le panneau SANS toucher à l'iframe (la musique continue)
     function togglePlayerMusic() {
         const box = document.getElementById('player-music');
-        if (!box) return;
-        const show = box.style.display === 'none';
-        box.style.display = show ? 'block' : 'none';
-        if (show) renderPlayerMusic();
+        if (box) box.classList.toggle('open');
     }
 
-    // Injecte le lecteur + dropdown de playlist dans le panneau
+    // Construit le dropdown + l'iframe de la playlist active
     function renderPlayerMusic() {
         const box = document.getElementById('player-music');
         if (!box || !playlists.length) return;
         if (activePlaylistIdx >= playlists.length) activePlaylistIdx = 0;
         const embed = spotifyEmbedUrl(playlists[activePlaylistIdx].url);
         const selector = playlists.length > 1 ? `
-            <div class="music-chips">
-                ${playlists.map((p, i) => `<button class="music-chip${i === activePlaylistIdx ? ' active' : ''}" onclick="setPlayerPlaylist(${i})">${p.name}</button>`).join('')}
-            </div>` : `<div class="music-title">${playlists[0].name}</div>`;
-        box.innerHTML = selector + (embed ? `<iframe src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '');
+            <select class="music-dropdown" onchange="setPlayerPlaylist(this.value)">
+                ${playlists.map((p, i) => `<option value="${i}"${i === activePlaylistIdx ? ' selected' : ''}>${p.name}</option>`).join('')}
+            </select>` : `<div class="music-title">${playlists[0].name}</div>`;
+        box.innerHTML = selector + (embed ? `<iframe id="music-iframe" src="${embed}" width="100%" height="80" frameborder="0" allow="encrypted-media" style="border-radius:10px;"></iframe>` : '');
     }
 
+    // Changer de playlist recharge forcément l'iframe (nouvelle source)
     function setPlayerPlaylist(idx) {
         activePlaylistIdx = +idx;
         renderPlayerMusic();
@@ -3428,17 +3441,44 @@
         }
     }
 
-    // Photo utilisée dans le player : celle de l'ambiance, sinon la première photo disponible
+    // Ambiance actuellement affichée dans le player (par défaut = l'ambiance des réglages)
+    let playerAmbianceId = null;
+
     function playerPhotoUrl() {
-        if (ambianceUrl()) return ambianceUrl();
-        const firstWithPhoto = Object.keys(AMBIANCES).map(k => AMBIANCES[k]).find(a => a.url);
-        return firstWithPhoto ? firstWithPhoto.url : null;
+        const all = allAmbiances();
+        const id = playerAmbianceId || currentAmbiance;
+        const a = all[id];
+        return a && a.url ? a.url : null;
+    }
+
+    // Menu de sélection d'ambiance dans le player
+    function togglePlayerAmbMenu() {
+        const menu = document.getElementById('player-amb-menu');
+        if (!menu) return;
+        if (menu.classList.contains('open')) { menu.classList.remove('open'); return; }
+        const all = allAmbiances();
+        const activeId = playerAmbianceId || currentAmbiance;
+        menu.innerHTML = Object.keys(all).map(id => {
+            const a = all[id];
+            const active = id === activeId ? ' active' : '';
+            return `<button class="amb-menu-item${active}" onclick="setPlayerAmbiance('${id}')">${a.label}</button>`;
+        }).join('');
+        menu.classList.add('open');
+    }
+
+    function setPlayerAmbiance(id) {
+        playerAmbianceId = id;
+        playerPhotoOn = !!playerPhotoUrl();
+        applyPlayerBg();
+        const menu = document.getElementById('player-amb-menu');
+        if (menu) menu.classList.remove('open');
     }
 
     function openPlayer() {
         const s = getData(currentId);
         if (!s || !s.ex.length) return;
         playerIndex = 0;
+        playerAmbianceId = currentAmbiance; // repart sur l'ambiance par défaut
         playerPhotoOn = !!playerPhotoUrl();
         applyPlayerBg();
         const p = document.getElementById('player');
@@ -3539,17 +3579,14 @@
     function applyPlayerBg() {
         const p = document.getElementById('player');
         const url = playerPhotoUrl();
-        const showPhoto = playerPhotoOn && !!url;
-        // Toujours définir la variable (évite un fond vide si la règle la lit)
+        const showPhoto = !!url; // si l'ambiance a une photo, on l'affiche
         p.style.setProperty('--ambiance-url', url ? `url('${url}')` : 'none');
         p.classList.toggle('no-photo', !showPhoto);
-        const btn = document.getElementById('player-bg-btn');
-        if (btn) btn.style.display = url ? 'flex' : 'none';
+        // Le bouton fond reste toujours visible : il ouvre le menu d'ambiance
     }
 
     function togglePlayerBg() {
-        playerPhotoOn = !playerPhotoOn;
-        applyPlayerBg();
+        togglePlayerAmbMenu();
     }
 
     function closePlayer() {
@@ -3772,6 +3809,11 @@
             && !e.target.closest('.add-panel')
             && !e.target.closest('.mini-btn')) {
             closeAllPanels();
+        }
+        // Ferme le menu d'ambiance du player si clic à l'extérieur
+        const ambMenu = document.getElementById('player-amb-menu');
+        if (ambMenu && ambMenu.classList.contains('open') && !e.target.closest('.player-amb-wrap')) {
+            ambMenu.classList.remove('open');
         }
     });
 
