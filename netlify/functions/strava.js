@@ -44,7 +44,9 @@ export async function handler(event) {
 
       const params = new URLSearchParams();
       params.append('name', b.name || 'Renforcement musculaire');
-      params.append('sport_type', 'WeightTraining');       // type Strava "Musculation"
+      // L'API /activities attend 'type' (WeightTraining = Musculation). 'sport_type' est aussi envoyé pour compat.
+      params.append('type', 'WeightTraining');
+      params.append('sport_type', 'WeightTraining');
       params.append('start_date_local', b.start_date_local || new Date().toISOString());
       params.append('elapsed_time', String(b.elapsed_time || 1800)); // secondes
       if (b.description) params.append('description', b.description);
@@ -54,8 +56,10 @@ export async function handler(event) {
         headers: { Authorization: 'Bearer ' + tj.access_token, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString()
       });
-      const cj = await cr.json();
-      return { statusCode: cr.status, headers: CORS, body: JSON.stringify({ activity: cj, refresh_token: tj.refresh_token }) };
+      let cj;
+      try { cj = await cr.json(); } catch (e) { cj = { parse_error: true }; }
+      // On renvoie le status réel de Strava + le détail pour diagnostic côté client
+      return { statusCode: 200, headers: CORS, body: JSON.stringify({ ok: cr.ok, strava_status: cr.status, activity: cj, refresh_token: tj.refresh_token }) };
     }
 
     return { statusCode: 400, headers: CORS, body: JSON.stringify({ error: 'action inconnue' }) };

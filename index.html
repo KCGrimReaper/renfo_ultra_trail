@@ -2647,13 +2647,24 @@
             if (j.refresh_token && j.refresh_token !== strava.refresh_token) {
                 strava.refresh_token = j.refresh_token; saveStrava(strava);
             }
-            if (j.activity && j.activity.id) {
+            const act = j.activity || {};
+            if (act.id) {
                 if (!silent) setStravaStatus('Séance publiée sur Strava ✓', false);
                 return true;
-            } else {
-                if (!silent) setStravaStatus('Strava : ' + (j.activity && j.activity.message ? j.activity.message : 'échec de publication'), true);
+            }
+            // Doublon (déjà publiée)
+            if (j.strava_status === 409) {
+                if (!silent) setStravaStatus('Cette séance semble déjà publiée sur Strava.', true);
                 return false;
             }
+            // Message d'erreur détaillé de Strava
+            let msg = 'échec de publication';
+            if (act.message) msg = act.message;
+            if (act.errors && act.errors.length) msg += ' — ' + act.errors.map(e => `${e.field}: ${e.code}`).join(', ');
+            if (j.error) msg = j.error;
+            if (!silent) setStravaStatus('Strava : ' + msg, true);
+            console.log('Strava réponse complète :', j);
+            return false;
         } catch (e) { if (!silent) setStravaStatus('Strava : ' + e, true); return false; }
     }
 
