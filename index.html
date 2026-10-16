@@ -2589,7 +2589,7 @@
 
     // === STRAVA (connexion + publication activité musculation) ===
     const STRAVA_FN = '/.netlify/functions/strava';
-    const STRAVA_RELAY = 'https://threadmill-mate.netlify.app/strava-renfo/'; // relais dans TMM
+    const STRAVA_RELAY = 'https://trailplannerpro.com/strava-relay/'; // relais dans Trail Planner Pro
     let strava = JSON.parse(localStorage.getItem('ultraStrava') || 'null'); // { refresh_token, athlete }
     let stravaAuto = localStorage.getItem('ultraStravaAuto') === '1';
     let lastStravaError = '';
@@ -2597,7 +2597,7 @@
     function saveStrava(t) { strava = t; localStorage.setItem('ultraStrava', JSON.stringify(t)); }
 
     function stravaConnect() {
-        // redirect_uri = relais TMM (seul domaine autorisé par Strava) ; state porte l'URL de retour Renfo
+        // redirect_uri = relais TPP (seul domaine autorisé par Strava) ; state porte l'URL de retour Renfo
         const back = location.origin + location.pathname;
         const state = 'renfo:' + encodeURIComponent(back);
         const url = 'https://www.strava.com/oauth/authorize'
