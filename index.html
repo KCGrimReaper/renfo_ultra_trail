@@ -140,6 +140,8 @@
         .chip { padding:8px 14px; border-radius:8px; border:1px solid var(--line); cursor:pointer; font-weight:800; font-size:0.75rem; text-transform:uppercase; background:#fff; color: var(--ink); transition:0.2s; user-select:none; }
         /* Chips compactes dans le formulaire d'exercice */
         #ex-modal .chip-row { gap: 6px; }
+        .chip-add { border-style: dashed; color: var(--stone); }
+        .chip-input { width: 160px; padding: 7px 10px; font-size: 0.8rem; font-weight: 700; }
         #ex-modal .chip { padding: 5px 10px; font-size: 0.7rem; font-weight: 700; text-transform: none; border-radius: 7px; }
         #ex-modal .modal-field { margin-bottom: 12px; }
         #ex-modal .modal-field label { margin-bottom: 5px; }
@@ -1226,8 +1228,18 @@
     }
 
     // === ATTRIBUTS ÉTENDUS (matériel, zone, latéralité, objectif) ===
-    const EQUIP_LABELS = { aucun: "Aucun", elastique: "Élastique", halteres: "Haltères", box: "Box", coussin: "Coussin", roulette: "Roulette", tapis: "Tapis", obstacle: "Obstacle" };
+    // Matériel perso : clé "x:<libellé>" stockée dans les exercices (pas de liste séparée, synchro via les exercices)
+    const EQUIP_LABELS = new Proxy({ aucun: "Aucun", elastique: "Élastique", halteres: "Haltères", box: "Box", coussin: "Coussin", roulette: "Roulette", tapis: "Tapis", obstacle: "Obstacle" }, {
+        get: (t, k) => (k in t) ? t[k] : (typeof k === 'string' && k.startsWith('x:') ? k.slice(2) : undefined)
+    });
     const EQUIP_LIST = ["aucun", "elastique", "halteres", "box", "coussin", "roulette", "tapis", "obstacle"];
+    // Matériel de base + matériel perso utilisé par au moins un exercice
+    function allEquipList(extra) {
+        const custom = new Set(extra || []);
+        getExerciseBank().forEach(e => (getAttrs(e).equip || []).forEach(k => custom.add(k)));
+        return EQUIP_LIST.concat([...custom].filter(k => k.startsWith('x:') && !EQUIP_LIST.includes(k))
+            .sort((a, b) => a.localeCompare(b, 'fr')));
+    }
     const ZONE_LABELS = { quadriceps: "Quadriceps", fessiers: "Fessiers", ischios: "Ischios", mollets: "Mollets/Chevilles", tronc: "Tronc/Gainage", hanches: "Hanches", pectoraux: "Pectoraux", epaules: "Épaules", dos: "Dos", bras: "Bras" };
     const ZONE_LIST = ["quadriceps", "fessiers", "ischios", "mollets", "tronc", "hanches", "pectoraux", "epaules", "dos", "bras"];
     const GOAL_LABELS = { montee: "Montée", descente: "Descente", prevention: "Prévention", stabilite: "Stabilité" };
@@ -1303,7 +1315,7 @@
         { key: 'cats',  label: 'Catégorie',   list: CAT_LIST,   labels: CAT_LABELS },
         { key: 'goals', label: 'Objectif',    list: GOAL_LIST,  labels: GOAL_LABELS },
         { key: 'zones', label: 'Zone',        list: ZONE_LIST,  labels: ZONE_LABELS },
-        { key: 'equip', label: 'Matériel',    list: EQUIP_LIST, labels: EQUIP_LABELS },
+        { key: 'equip', label: 'Matériel',    get list() { return allEquipList(); }, labels: EQUIP_LABELS },
         { key: 'uni',   label: 'Latéralité',  list: ['uni','bi'], labels: UNI_LABELS }
     ];
 
@@ -1874,8 +1886,48 @@
         build('nex-cat-chips', CAT_LIST, CAT_LABELS, 'cats');
         build('nex-goal-chips', GOAL_LIST, GOAL_LABELS, 'goals');
         build('nex-zone-chips', ZONE_LIST, ZONE_LABELS, 'zones');
-        build('nex-equip-chips', EQUIP_LIST, EQUIP_LABELS, 'equip');
+        renderNexEquipChips();
         build('nex-uni-chips', ["uni", "bi"], UNI_LABELS, 'uni');
+    }
+
+    // Chips matériel de la modale : base + perso + bouton d'ajout libre
+    function renderNexEquipChips() {
+        const el = document.getElementById('nex-equip-chips');
+        if (!el) return;
+        const list = allEquipList([...nexSel.equip]);
+        el.innerHTML = list.map(k => `<button type="button" class="chip${nexSel.equip.has(k) ? ' active' : ''}" data-k="${k.replace(/"/g, '&quot;')}" data-axis="equip"></button>`).join("")
+            + `<button type="button" class="chip chip-add" id="nex-equip-add">+ Ajouter</button>`;
+        el.querySelectorAll('.chip[data-k]').forEach((btn, i) => {
+            btn.textContent = EQUIP_LABELS[list[i]];
+            btn.onclick = () => {
+                const k = list[i];
+                nexSel.equip.has(k) ? nexSel.equip.delete(k) : nexSel.equip.add(k);
+                btn.classList.toggle('active', nexSel.equip.has(k));
+            };
+        });
+        document.getElementById('nex-equip-add').onclick = () => {
+            const add = document.getElementById('nex-equip-add');
+            const input = document.createElement('input');
+            input.type = 'text'; input.className = 'text-input chip-input'; input.placeholder = 'Ex : Kettlebell';
+            add.replaceWith(input);
+            input.focus();
+            let done = false;
+            const commit = () => {
+                if (done) return; done = true;
+                const label = input.value.replace(/[<>"'&]/g, '').trim().replace(/\s+/g, ' ').slice(0, 30);
+                if (label) {
+                    // Réutilise le matériel existant si même libellé (base ou perso)
+                    const same = allEquipList([...nexSel.equip]).find(k => EQUIP_LABELS[k].toLowerCase() === label.toLowerCase());
+                    nexSel.equip.add(same || 'x:' + label);
+                }
+                renderNexEquipChips();
+            };
+            input.onkeydown = (ev) => {
+                if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+                if (ev.key === 'Escape') { input.value = ''; commit(); }
+            };
+            input.onblur = commit;
+        };
     }
 
     function syncNexChips() {
@@ -1898,6 +1950,7 @@
         document.getElementById('nex-consigne').value = "";
         resetNexSel();
         syncNexChips();
+        renderNexEquipChips();
         document.getElementById('nex-status').innerText = "";
         document.getElementById('ex-modal-overlay').classList.add('open');
         document.getElementById('ex-modal').classList.add('open');
@@ -1920,6 +1973,7 @@
             uni: new Set(a.uni ? [a.uni] : [])
         };
         syncNexChips();
+        renderNexEquipChips();
         document.getElementById('nex-status').innerText = "";
         document.getElementById('ex-modal-overlay').classList.add('open');
         document.getElementById('ex-modal').classList.add('open');
