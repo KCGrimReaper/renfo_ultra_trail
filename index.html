@@ -492,6 +492,22 @@
         .agenda-today-line { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; }
         .agenda-today-line::before, .agenda-today-line::after { content: ""; flex-grow: 1; height: 1px; background: var(--line); }
         .agenda-today-line span { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; color: var(--wood); letter-spacing: 1px; }
+        .body-map-wrap { margin-top:10px; }
+        .body-map { display:block; width:100%; max-width:240px; height:auto; }
+        .body-map-wrap.detail .body-map { max-width:200px; margin-top:8px; }
+        .body-map .bm-sil > * { fill: var(--bg); stroke: var(--line); stroke-width:1; }
+        .body-map .bm-zone { fill: #e4dccd; stroke:#fff; stroke-width:1; transition: fill 0.15s; }
+        .body-map .bm-zone.on { fill: var(--wood); }
+        .body-map.interactive .bm-zone { cursor:pointer; }
+        .body-map.interactive .bm-zone:hover { fill: var(--sand); }
+        .body-map.interactive .bm-zone.on:hover { fill: var(--ink); }
+        .body-map .bm-lab { font-size:8px; font-weight:800; fill: var(--stone); text-anchor:middle; text-transform:uppercase; letter-spacing:0.5px; font-family: inherit; }
+        .done-pill { display:inline-block; vertical-align:middle; margin-left:8px; background: var(--wood); color:#fff; font-size:0.62rem; font-weight:900; letter-spacing:0.3px; text-transform:uppercase; padding:3px 8px; border-radius:20px; }
+        .btn-session.is-done { background: #fff; }
+        .today-done { display:flex; align-items:center; gap:10px; margin-top:12px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; }
+        .today-done .done-pill { margin-left:0; }
+        .today-done .td-title { flex-grow:1; font-weight:800; color: var(--ink); }
+        .today-done .td-info { font-size:0.8rem; font-weight:700; color: var(--stone); }
         .done-badge { background: #fff; color: var(--wood); border: 1px solid var(--wood); font-size: 0.6rem; font-weight: bold; padding: 3px 4px; border-radius: 4px; text-transform: uppercase; text-align: center; word-break: break-word; line-height: 1.2; margin-top: 3px; }
 
         /* --- PLAYER DE SÉANCE --- */
@@ -1038,6 +1054,7 @@
     <div class="modal-field">
         <label>Zone du corps</label>
         <div class="chip-row" id="nex-zone-chips" style="margin-bottom:0;"></div>
+        <div id="nex-body-map" class="body-map-wrap"></div>
     </div>
     <div class="modal-field">
         <label>Matériel</label>
@@ -1424,6 +1441,52 @@
         return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
     }
     const TAG_LABELS = new Proxy({}, { get: (_, k) => k });
+
+    // Schéma corporel (face + dos). Chaque forme porte data-zone ; active = zone ciblée.
+    const BODY_SHAPES = {
+        // [vue, type, attributs]  vue : f = face (x≈50), b = dos (x≈150)
+        epaules:    [['f','ellipse','cx="31" cy="47" rx="8" ry="6.5"'], ['f','ellipse','cx="69" cy="47" rx="8" ry="6.5"'],
+                     ['b','ellipse','cx="131" cy="47" rx="8" ry="6.5"'], ['b','ellipse','cx="169" cy="47" rx="8" ry="6.5"']],
+        pectoraux:  [['f','rect','x="38" y="44" width="11.5" height="15" rx="4"'], ['f','rect','x="50.5" y="44" width="11.5" height="15" rx="4"']],
+        bras:       [['f','rect','x="19" y="55" width="8" height="40" rx="4"'], ['f','rect','x="73" y="55" width="8" height="40" rx="4"'],
+                     ['b','rect','x="119" y="55" width="8" height="40" rx="4"'], ['b','rect','x="173" y="55" width="8" height="40" rx="4"']],
+        tronc:      [['f','rect','x="40" y="61" width="20" height="29" rx="5"']],
+        dos:        [['b','rect','x="38" y="43" width="24" height="44" rx="6" transform="translate(100 0)"']],
+        hanches:    [['f','ellipse','cx="38" cy="96" rx="5" ry="6"'], ['f','ellipse','cx="62" cy="96" rx="5" ry="6"'],
+                     ['b','ellipse','cx="132.5" cy="93" rx="4.5" ry="6"'], ['b','ellipse','cx="167.5" cy="93" rx="4.5" ry="6"']],
+        fessiers:   [['b','ellipse','cx="143.5" cy="98" rx="7" ry="8"'], ['b','ellipse','cx="156.5" cy="98" rx="7" ry="8"']],
+        quadriceps: [['f','rect','x="37" y="104" width="12" height="38" rx="6"'], ['f','rect','x="51" y="104" width="12" height="38" rx="6"']],
+        ischios:    [['b','rect','x="137" y="108" width="12" height="34" rx="6"'], ['b','rect','x="151" y="108" width="12" height="34" rx="6"']],
+        mollets:    [['f','rect','x="38.5" y="148" width="9" height="34" rx="4.5"'], ['f','rect','x="52.5" y="148" width="9" height="34" rx="4.5"'],
+                     ['b','ellipse','cx="143" cy="161" rx="5.5" ry="13"'], ['b','ellipse','cx="157" cy="161" rx="5.5" ry="13"']]
+    };
+    function bodyMapSvg(zones, interactive) {
+        const sel = new Set(zones || []);
+        // Silhouette de fond (identique face/dos)
+        const sil = (dx) => `<g transform="translate(${dx} 0)" class="bm-sil">
+            <circle cx="50" cy="18" r="11"/><rect x="45" y="28" width="10" height="9" rx="3"/>
+            <rect x="27" y="38" width="46" height="62" rx="14"/>
+            <rect x="17" y="50" width="12" height="50" rx="6"/><rect x="71" y="50" width="12" height="50" rx="6"/>
+            <rect x="35" y="94" width="30" height="16" rx="8"/>
+            <rect x="35" y="100" width="14.5" height="90" rx="7"/><rect x="50.5" y="100" width="14.5" height="90" rx="7"/>
+        </g>`;
+        const parts = Object.keys(BODY_SHAPES).map(z => BODY_SHAPES[z].map(([, type, attrs]) =>
+            `<${type} ${attrs} class="bm-zone${sel.has(z) ? ' on' : ''}" data-zone="${z}"><title>${ZONE_LABELS[z]}</title></${type}>`).join('')).join('');
+        return `<svg class="body-map${interactive ? ' interactive' : ''}" viewBox="0 0 200 206" role="img" aria-label="Zones ciblées">
+            ${sil(0)}${sil(100)}${parts}
+            <text x="50" y="203" class="bm-lab">Face</text><text x="150" y="203" class="bm-lab">Dos</text>
+        </svg>`;
+    }
+    function renderNexBodyMap() {
+        const el = document.getElementById('nex-body-map');
+        if (!el) return;
+        el.innerHTML = bodyMapSvg([...nexSel.zones], true);
+        el.querySelectorAll('.bm-zone').forEach(sh => sh.onclick = () => {
+            const z = sh.dataset.zone;
+            nexSel.zones.has(z) ? nexSel.zones.delete(z) : nexSel.zones.add(z);
+            syncNexChips();
+        });
+    }
 
     function catTagsHtml(e) {
         return getCats(e).map(c => `<span class="cat-tag cat-${c}">${CAT_LABELS[c]}</span>`).join(" ");
@@ -2124,6 +2187,7 @@
                         if (set.has(k)) set.delete(k); else set.add(k);
                         btn.classList.toggle('active', set.has(k));
                     }
+                    if (setKey === 'zones') renderNexBodyMap();
                 };
             });
         };
@@ -2186,6 +2250,7 @@
             if (!el) return;
             el.querySelectorAll('.chip').forEach(b => b.classList.toggle('active', nexSel[key].has(b.dataset.k)));
         });
+        renderNexBodyMap();
     }
 
     function resetNexSel() {
@@ -2642,7 +2707,7 @@
                 <div class="detail-tags">${catTagsHtml(e)}</div>
                 ${line("Consigne", e.c)}
                 ${line("Objectif", a.goals.map(g => GOAL_LABELS[g]).join(", "))}
-                ${line("Zone", a.zones.map(z => ZONE_LABELS[z]).join(", "))}
+                ${a.zones.length ? line("Zone", a.zones.map(z => ZONE_LABELS[z]).join(", ") + `<div class="body-map-wrap detail">${bodyMapSvg(a.zones, false)}</div>`) : ""}
                 ${line("Matériel", hasMat ? e.m : "Aucun")}
                 ${line("Latéralité", a.uni ? UNI_LABELS[a.uni] : "")}
                 ${line("Labels", a.tags.map(t => `<span class="ex-label">${t}</span>`).join(' '))}
@@ -3876,18 +3941,27 @@
         const doneToday = history.filter(h => h.date === todayStr);
 
         let html = `<div class="card"><div class="day-header" style="grid-column:auto; margin-top:0;">Séance du jour</div>`;
+        const doneInfo = (h) => [h.realSec ? fmtDuration(Math.round(h.realSec / 60)) : '', h.hr ? `FC ${h.hr.avg} moy` : ''].filter(Boolean).join(' · ');
+        // La séance planifiée, si elle est déjà faite, n'est affichée qu'une fois (avec la mention Faite)
+        const planDone = plan ? doneToday.find(h => h.id === plan.id) : null;
         if (plan && getData(plan.id)) {
             const s = getData(plan.id);
             html += `
-                <button class="btn-session" style="width:100%; margin-top:15px;" onclick="openSession('${plan.id}')">
-                    <span class="s-title">${s.t}</span>
-                    <span class="s-subtitle">${s.resume}</span>
+                <button class="btn-session${planDone ? ' is-done' : ''}" style="width:100%; margin-top:15px;" onclick="openSession('${plan.id}')">
+                    <span class="s-title">${s.t}${planDone ? ' <span class="done-pill">✓ Faite</span>' : ''}</span>
+                    <span class="s-subtitle">${planDone && doneInfo(planDone) ? doneInfo(planDone) : s.resume}</span>
                 </button>`;
-        } else {
+        } else if (!doneToday.length) {
             html += `<div class="empty-hint">Rien de planifié aujourd'hui.</div>`;
         }
-        if (doneToday.length > 0) {
-            html += doneToday.map(h => `<div class="hist-row" style="padding:12px 0 0; border:none;"><span class="hist-title" style="padding:0;">${h.title}</span><span class="done-badge" style="margin-top:0;">Fait</span></div>`).join("");
+        const others = doneToday.filter(h => h !== planDone);
+        if (others.length > 0) {
+            html += others.map(h => `
+                <div class="today-done">
+                    <span class="done-pill">✓ Faite</span>
+                    <span class="td-title">${h.title}</span>
+                    <span class="td-info">${doneInfo(h)}</span>
+                </div>`).join("");
         }
         html += `</div>`;
         box.innerHTML = html;
