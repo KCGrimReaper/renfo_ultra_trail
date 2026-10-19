@@ -296,6 +296,22 @@
         .detail-actions { display: flex; gap: 10px; margin-top: 18px; }
 
         /* --- ÉTAT VIDE CONSTRUIRE --- */
+        .builder-lead { text-align:center; color: var(--stone); font-weight:600; font-size:0.9rem; margin: 0 0 20px; }
+        .bi-steps { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
+        .bi-step { display:flex; gap:12px; align-items:flex-start; background: var(--bg); border:1px solid var(--line); border-radius:12px; padding:14px; }
+        .bi-step b { display:block; font-size:0.9rem; color: var(--ink); margin-bottom:3px; }
+        .bi-step p { margin:0; font-size:0.8rem; color: var(--stone); font-weight:600; line-height:1.45; }
+        .bi-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background: var(--ink); color:#fff; font-weight:900; font-size:0.8rem; display:flex; align-items:center; justify-content:center; }
+        .bi-cta { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:20px 0 6px; }
+        .bi-quick-title { font-weight:900; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px; color: var(--muted); margin:22px 0 8px; }
+        .bi-quick { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
+        .bi-quick-item { display:flex; align-items:center; gap:10px; text-align:left; background: var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; cursor:pointer; font-family:inherit; }
+        .bi-quick-item:hover { border-color: var(--ink); }
+        .bi-quick-item .bq-info { flex-grow:1; min-width:0; }
+        .bi-quick-item .bq-name { font-weight:800; color: var(--ink); font-size:0.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .bi-quick-item .bq-sub { font-size:0.75rem; color: var(--stone); font-weight:600; margin-top:2px; }
+        .bi-quick-item svg { width:16px; height:16px; stroke: var(--stone); fill:none; stroke-width:2.2; flex-shrink:0; }
+        @media (max-width: 640px) { .bi-steps { grid-template-columns: 1fr; } }
         .builder-empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 30px 20px 20px; }
         .builder-empty-state > svg { width: 52px; height: 52px; stroke: var(--sand); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
         .builder-empty-state p { margin: 0; color: var(--muted); font-weight: 600; line-height: 1.6; }
@@ -359,9 +375,27 @@
         .theme-chip { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 7px 16px; font-weight: 700; font-size: 0.8rem; cursor: pointer; color: var(--ink); }
         .theme-chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
         .share-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .seg { display:flex; background: var(--bg); border:1px solid var(--line); border-radius:10px; padding:3px; margin-bottom:12px; }
+        .seg button { flex:1; border:none; background:none; padding:7px 10px; border-radius:7px; font-family:inherit; font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.3px; color: var(--stone); cursor:pointer; }
+        .seg button.active { background: var(--card); color: var(--ink); box-shadow: 0 1px 4px rgba(43,38,32,0.15); }
+        .share-text { background: var(--bg); border:1px solid var(--line); border-radius:14px; padding:16px; font-size:0.82rem; line-height:1.55; color: var(--ink); white-space:pre-wrap; word-break:break-word; min-height:200px; max-height:430px; overflow-y:auto; }
+        .pv-actions { display:flex; gap:8px; margin-top:12px; }
+        .pv-btn { flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:38px; padding:0 10px; border-radius:9px; border:1px solid var(--line); background: var(--card); color: var(--ink); font-family:inherit; font-weight:800; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.3px; cursor:pointer; text-decoration:none; }
+        .pv-btn:hover { border-color: var(--ink); }
+        .pv-btn.dark { background: var(--ink); color:#fff; border-color: var(--ink); }
+        .pv-btn.dark:hover { background: var(--wood); border-color: var(--wood); }
+        .pv-btn svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+        .strava-card { border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+        .sc-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+        .sc-logo { width:18px; height:18px; fill:#fc4c02; }
+        .sc-title { flex-grow:1; font-weight:900; font-size:0.85rem; color: var(--ink); }
+        .sc-btn { background:#fc4c02; color:#fff; border:none; border-radius:8px; padding:7px 16px; font-family:inherit; font-weight:800; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.3px; cursor:pointer; }
+        .sc-btn:hover { background:#e04402; }
+        .sc-btn:disabled { opacity:0.6; cursor:default; }
         @media (max-width: 640px) {
             .share-layout { flex-direction: column; align-items: center; gap: 18px; padding: 4px 18px 24px; }
-            .share-preview { position: static; width: 200px; }
+            .share-preview { position: static; width: 100%; max-width: 300px; }
+            .share-preview img { width: 220px; margin: 0 auto; }
             .share-config { width: 100%; }
             .share-actions { justify-content: stretch; }
             .share-actions .action-btn { flex: 1; justify-content: center; }
@@ -666,11 +700,16 @@
 
     <div id="builder-screen" class="screen">
         <div class="card">
-            <div class="header-box" style="margin-bottom:16px;">
+            <div class="header-box" style="margin-bottom:6px;">
                 <h1 class="screen-title">Construire</h1>
             </div>
+            <p class="builder-lead">Compose ta propre séance de renfo, puis lance-la, planifie-la ou garde-la comme modèle.</p>
 
             <div id="builder-session-wrap" style="display:none;">
+                <div class="modal-field" style="margin-bottom:14px;">
+                    <label for="builder-name">Nom de la séance</label>
+                    <input type="text" id="builder-name" class="text-input">
+                </div>
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
                     <span style="font-weight:900; text-transform:uppercase; font-size:0.9rem;">Ma séance · <span id="builder-count">0</span> exos</span>
                     <span id="builder-duration" style="font-size:0.85rem; font-weight:800; color:var(--wood);"></span>
@@ -696,10 +735,13 @@
                 </div>
             </div>
 
-            <div id="builder-empty" class="builder-empty-state">
-                <svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>
-                <p>Ta séance est vide.<br>Ajoute des exercices ou pars d'un modèle.</p>
-                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+            <div id="builder-empty">
+                <div class="bi-steps">
+                    <div class="bi-step"><span class="bi-num">1</span><div><b>Choisis tes exercices</b><p>Dans ta bibliothèque, filtrable par catégorie, zone, matériel ou label.</p></div></div>
+                    <div class="bi-step"><span class="bi-num">2</span><div><b>Règle séries et reps</b><p>Choisis une variante si besoin, puis réordonne par glisser-déposer.</p></div></div>
+                    <div class="bi-step"><span class="bi-num">3</span><div><b>Lance ou planifie</b><p>Démarre la séance guidée, place-la dans le planning ou enregistre-la en modèle.</p></div></div>
+                </div>
+                <div class="bi-cta">
                     <button class="action-btn primary" onclick="openExerciseSheet()">
                         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                         <span>Ajouter des exercices</span>
@@ -709,6 +751,7 @@
                         <span>Charger un modèle</span>
                     </button>
                 </div>
+                <div id="builder-quick"></div>
             </div>
         </div>
 
@@ -917,10 +960,28 @@
     <div class="sheet-body">
         <div class="share-layout">
             <div class="share-preview">
+                <div class="seg" id="share-mode-seg">
+                    <button type="button" data-mode="image" onclick="setShareMode('image')">Image</button>
+                    <button type="button" data-mode="text" onclick="setShareMode('text')">Texte</button>
+                </div>
                 <img id="share-img" alt="Résumé de séance">
+                <div id="share-text" class="share-text" style="display:none;"></div>
+                <div class="pv-actions" id="share-img-actions">
+                    <button class="pv-btn dark" onclick="shareSessionImage()">
+                        <svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13"/></svg><span>Partager</span>
+                    </button>
+                    <a id="share-download" download="seance-renfo.png" class="pv-btn">
+                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span>Télécharger</span>
+                    </a>
+                </div>
+                <div class="pv-actions" id="share-text-actions" style="display:none;">
+                    <button class="pv-btn dark" id="share-copy-btn" onclick="copySessionText()">
+                        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"/></svg><span>Copier le texte</span>
+                    </button>
+                </div>
             </div>
             <div class="share-config">
-                <div class="share-section">
+                <div class="share-section" id="share-theme-section">
                     <div class="share-section-title">Ambiance</div>
                     <div class="share-theme-row" id="share-theme-row"></div>
                 </div>
@@ -937,27 +998,16 @@
                     <label class="share-opt"><input type="checkbox" id="opt-duree" checked onchange="refreshShareImage()"> <span>Durée</span></label>
                     <label class="share-opt"><input type="checkbox" id="opt-fc" checked onchange="refreshShareImage()"> <span>Fréquence cardiaque (si mesurée)</span></label>
                 </div>
-                <div class="share-actions">
-                    <button class="action-btn primary" onclick="shareSessionImage()">
-                        <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v14"/></svg>
-                        <span>Partager</span>
-                    </button>
-                    <a id="share-download" download="seance-renfo.png" class="action-btn" style="text-decoration:none;">
-                        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                        <span>Télécharger</span>
-                    </a>
-                </div>
-                <div class="share-section">
-                    <div class="share-section-title">Strava</div>
+                <div class="strava-card">
+                    <div class="sc-head">
+                        <svg class="sc-logo" viewBox="0 0 24 24"><path d="M15.39 17.94l-2.09-4.12h-3.06L15.39 24l5.15-10.18h-3.07M10.38 8.23l2.84 5.6h4.17L10.46 0l-7 13.83h4.17"/></svg>
+                        <span class="sc-title">Strava</span>
+                        <button class="sc-btn" id="share-strava-btn" onclick="publishShareToStrava()">Publier</button>
+                    </div>
                     <label class="switch-row">
-                        <span class="sw-text">Résumé dans la description<span class="sw-sub">Les infos cochées ci-dessus sont écrites dans la description de l'activité</span></span>
+                        <span class="sw-text">Résumé dans la description<span class="sw-sub">Le texte (onglet « Texte ») est écrit dans la description de l'activité</span></span>
                         <span class="switch"><input type="checkbox" id="opt-strava-desc" onchange="setStravaDesc(this.checked)"><span class="sw-track"></span></span>
                     </label>
-                    <div class="share-actions" style="margin-top:10px;">
-                        <button class="action-btn" id="share-strava-btn" onclick="publishShareToStrava()" style="flex-basis:100%; justify-content:center; background:#fc4c02; color:#fff; border-color:#fc4c02;">
-                            <span>Publier sur Strava</span>
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1690,7 +1740,7 @@
         if(screenId === 'settings-screen') { renderAmbiancePicker(); renderPlaylistManager(); renderStravaSettings(); }
         // Filtres : la liste du matériel perso et des labels peut avoir changé
         if(screenId === 'exercises-screen') initExmCatChips();
-        if(screenId === 'builder-screen') initCatChips();
+        if(screenId === 'builder-screen') { initCatChips(); renderBuilderSession(); }
         window.scrollTo(0, 0);
     }
 
@@ -2186,9 +2236,10 @@
     function renderBuilderSession() {
         const has = currentBuilderList.length > 0;
         document.getElementById('builder-session-wrap').style.display = has ? 'block' : 'none';
-        document.getElementById('builder-empty').style.display = has ? 'none' : 'flex';
+        document.getElementById('builder-empty').style.display = has ? 'none' : 'block';
         document.getElementById('builder-actions-card').style.display = has ? 'block' : 'none';
-        if (!has) return;
+        if (!has) { renderBuilderQuick(); return; }
+        document.getElementById('builder-name').placeholder = defaultSessionName();
 
         document.getElementById('builder-count').innerText = currentBuilderList.length;
         const durEl = document.getElementById('builder-duration');
@@ -2715,6 +2766,11 @@
         listEl.innerHTML = html || `<div class="empty-hint">Aucun modèle. Construis une séance et enregistre-la comme modèle.</div>`;
     }
 
+    function defaultSessionName(d) {
+        d = d || new Date();
+        return `Séance de renforcement ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+    }
+
     // Stocke une séance à partir d'une liste d'exercices (relance depuis historique/planning)
     function storeSessionFromEx(exList, title = null) {
         if (!exList || exList.length === 0) return null;
@@ -2723,7 +2779,7 @@
         const d = new Date();
         const id = 'C' + Date.now();
         customSessions[id] = {
-            t: title || `Séance perso ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`,
+            t: title || defaultSessionName(d),
             concept: `Séance hybride construite sur mesure.`,
             resume: `Composition : ${compText}.`,
             custom: true,
@@ -2735,7 +2791,49 @@
     }
 
     function storeBuiltSession() {
-        return storeSessionFromEx(currentBuilderList);
+        const nameEl = document.getElementById('builder-name');
+        const name = nameEl.value.trim();
+        nameEl.value = '';
+        return storeSessionFromEx(currentBuilderList, name || null);
+    }
+
+    // Démarrage rapide (séance vide) : modèles + séances récentes à reprendre
+    function renderBuilderQuick() {
+        const el = document.getElementById('builder-quick');
+        if (!el) return;
+        const chev = `<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
+        const item = (onclick, name, sub) => `<button class="bi-quick-item" onclick="${onclick}"><div class="bq-info"><div class="bq-name">${name}</div><div class="bq-sub">${sub}</div></div>${chev}</button>`;
+        const tpls = Object.keys(customTemplates).slice(0, 4).map(id =>
+            item(`loadTemplate('${id}')`, customTemplates[id].name, `Modèle · ${customTemplates[id].ex.length} exercices`));
+        const recent = history.map((h, idx) => ({ h, idx })).filter(({ h }) => h.exos && h.exos.length).slice(0, 4).map(({ h, idx }) =>
+            item(`loadHistoryInBuilder(${idx})`, h.title, `${fmtHistDate(h.date)} · ${h.exos.length} exercices`));
+        let html = '';
+        if (recent.length) html += `<div class="bi-quick-title">Repartir d'une séance récente</div><div class="bi-quick">${recent.join('')}</div>`;
+        if (tpls.length) html += `<div class="bi-quick-title">Tes modèles</div><div class="bi-quick">${tpls.join('')}</div>`;
+        el.innerHTML = html;
+    }
+
+    // Charge les exercices d'une séance de l'historique dans le constructeur (à modifier avant de lancer)
+    function loadHistoryInBuilder(idx) {
+        const h = history[idx];
+        if (!h || !h.exos) return;
+        const bank = getExerciseBank();
+        currentBuilderList = h.exos.map(x => {
+            const cur = findCurrentExercise(x.id, bank);
+            if (!cur) return null;
+            const entry = { ...cur, r: x.r || cur.r };
+            const v = x.v && getVariants(cur).find(vv => vv.label === x.v);
+            if (v) {
+                entry.variantLabel = v.label; entry.baseName = cleanName(cur.n);
+                entry.n = variantName(cleanName(cur.n), v.label);
+                if (v.c) entry.c = v.c;
+                if (v.m) entry.m = v.m;
+            }
+            delete entry.inter; delete entry.expert; delete entry.variants;
+            return entry;
+        }).filter(Boolean);
+        renderBuilderSession();
+        window.scrollTo(0, 0);
     }
 
     function launchBuiltSession() {
@@ -3226,13 +3324,21 @@
             for (let i = 0; i < ex.length; i++) {
                 if (y > maxY) { ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillText(`+ ${ex.length - i} autres`, pad, y); break; }
                 const e = ex[i];
-                ctx.fillStyle = COL.text;
-                ctx.textAlign = 'left';
-                ctx.fillText(cleanName(e.n), pad, y);
                 // Reps et/ou matériel à droite selon options
                 const rightParts = [];
                 if (opts.reps && e.r) rightParts.push(e.r);
                 if (opts.materiel && e.m && e.m.toLowerCase() !== 'aucun') rightParts.push(e.m);
+                // Nom tronqué pour ne pas chevaucher la partie droite
+                const rightW = rightParts.length ? ctx.measureText(rightParts.join(' · ')).width + 30 : 0;
+                const maxNameW = W - pad * 2 - rightW;
+                let name = cleanName(e.n);
+                if (ctx.measureText(name).width > maxNameW) {
+                    while (name.length > 1 && ctx.measureText(name + '…').width > maxNameW) name = name.slice(0, -1);
+                    name = name.trimEnd() + '…';
+                }
+                ctx.fillStyle = COL.text;
+                ctx.textAlign = 'left';
+                ctx.fillText(name, pad, y);
                 if (rightParts.length) {
                     ctx.fillStyle = COL.accent;
                     ctx.textAlign = 'right';
@@ -3384,12 +3490,44 @@
         const o = readShareOptions(); delete o.theme;
         localStorage.setItem('ultraShareOpts', JSON.stringify(o));
         renderShareCanvas();
+        renderShareText();
+    }
+
+    // Aperçu : image ou texte (celui écrit dans la description Strava)
+    let shareMode = localStorage.getItem('ultraShareMode') === 'text' ? 'text' : 'image';
+    function setShareMode(mode) {
+        shareMode = mode;
+        localStorage.setItem('ultraShareMode', mode);
+        const isText = mode === 'text';
+        document.querySelectorAll('#share-mode-seg button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        document.getElementById('share-img').style.display = isText ? 'none' : 'block';
+        document.getElementById('share-img-actions').style.display = isText ? 'none' : 'flex';
+        document.getElementById('share-text').style.display = isText ? 'block' : 'none';
+        document.getElementById('share-text-actions').style.display = isText ? 'flex' : 'none';
+        document.getElementById('share-theme-section').style.display = isText ? 'none' : 'block';
+        if (isText) renderShareText();
+    }
+    function shareSummaryText() {
+        return _shareSession ? buildSessionSummaryText(_shareSession, readShareOptions()) + '\n\nvia Renfo Ultra-Trail' : '';
+    }
+    function renderShareText() {
+        const el = document.getElementById('share-text');
+        if (el) el.textContent = shareSummaryText();
+    }
+    async function copySessionText() {
+        const txt = shareSummaryText();
+        const label = document.querySelector('#share-copy-btn span');
+        try { await navigator.clipboard.writeText(txt); label.innerText = 'Copié ✓'; }
+        catch (e) { window.prompt('Copie le texte :', txt); }
+        setTimeout(() => { label.innerText = 'Copier le texte'; }, 1800);
     }
 
     function openSessionImage(session) {
         _shareSession = session;
         applySavedShareOptions();
         document.getElementById('opt-strava-desc').checked = stravaDesc;
+        setShareMode(shareMode);
+        renderShareText();
         renderShareThemeChips();
         renderShareCanvas();
         document.getElementById('sheet-overlay').classList.add('open');
