@@ -81,6 +81,12 @@
         #plan-modal h3 { margin-top: 0; text-transform: uppercase; font-weight: 900; border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
         .modal-field { margin-bottom: 15px; }
         .modal-field label { display: block; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; margin-bottom: 5px; color: var(--stone); }
+        .plan-card { background: var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .plan-card-title { font-weight:900; color: var(--ink); }
+        .plan-card-sub { font-size:0.8rem; font-weight:700; color: var(--stone); margin-top:3px; }
+        .plan-btns { display:flex; gap:8px; margin-bottom:14px; }
+        .plan-btns .action-btn { flex:1; justify-content:center; padding:10px; }
+        #modal-date-title::first-letter { text-transform: uppercase; }
         .modal-select { width: 100%; padding: 10px; font-family: inherit; font-size: 1rem; border: 1px solid var(--line); border-radius: 6px; background:#fff; color: var(--ink); }
         .modal-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 
@@ -177,6 +183,18 @@
         .search-row { display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap; }
         .search-row .text-input { flex-grow:1; width:auto; }
 
+        /* --- VUE SÉANCE : liste des exercices --- */
+        .sx-item { display:flex; gap:14px; padding:16px 20px; border-bottom:1px solid var(--line); align-items:flex-start; }
+        .sx-item:last-child { border-bottom:none; }
+        .sx-num { flex-shrink:0; width:28px; height:28px; border-radius:50%; background: var(--bg); border:1px solid var(--line); color: var(--ink); font-weight:900; font-size:0.8rem; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+        .sx-body { flex-grow:1; min-width:0; }
+        .sx-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+        .sx-name { font-weight:800; color: var(--ink); font-size:1rem; line-height:1.3; }
+        .sx-reps { flex-shrink:0; font-weight:900; color: var(--wood); font-size:0.95rem; }
+        .sx-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin-top:6px; }
+        .sx-mat { font-size:0.78rem; font-weight:700; color: var(--stone); }
+        .sx-mat::before { content:""; display:inline-block; width:4px; height:4px; border-radius:50%; background: var(--sand); margin-right:8px; vertical-align:middle; }
+        .sx-cons { margin-top:8px; font-size:0.88rem; line-height:1.5; color: var(--ink); opacity:0.8; }
         /* --- HISTORIQUE --- */
         /* Lignes simples (accueil : favoris, activité récente) */
         .hist-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
@@ -296,6 +314,22 @@
         .detail-actions { display: flex; gap: 10px; margin-top: 18px; }
 
         /* --- ÉTAT VIDE CONSTRUIRE --- */
+        .bld-card { padding: 22px 25px; }
+        .bld-kicker { font-weight:900; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.6px; color: var(--wood); }
+        .bld-title { width:100%; border:none; border-bottom:2px solid var(--line); background:none; font-family:inherit; font-size:1.5rem; font-weight:900; color: var(--ink); padding:6px 0 8px; outline:none; }
+        .bld-title:focus { border-bottom-color: var(--ink); }
+        .bld-title::placeholder { color: var(--ink); opacity:0.35; }
+        .bld-stats { display:flex; gap:12px; margin:10px 0 14px; font-weight:800; font-size:0.82rem; color: var(--stone); }
+        .bld-stats #builder-duration { color: var(--wood); }
+        .bld-list:not(:empty) { border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:12px; }
+        .bld-add { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:16px; border:2px dashed var(--line); border-radius:12px; background: var(--bg); color: var(--ink); font-family:inherit; font-weight:800; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.3px; cursor:pointer; }
+        .bld-add:hover { border-color: var(--ink); }
+        .bld-add svg { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.4; stroke-linecap:round; }
+        .bld-list:empty + .bld-add { padding:34px 16px; }
+        .bld-tools { display:flex; gap:18px; justify-content:center; margin-top:12px; }
+        .bld-link { background:none; border:none; font-family:inherit; font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.3px; color: var(--stone); cursor:pointer; text-decoration: underline; text-underline-offset:3px; }
+        .bld-link:hover { color: var(--ink); }
+        #builder-quick:not(:empty) { margin-top: 0; }
         .builder-lead { text-align:center; color: var(--stone); font-weight:600; font-size:0.9rem; margin: 0 0 20px; }
         .bi-steps { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
         .bi-step { display:flex; gap:12px; align-items:flex-start; background: var(--bg); border:1px solid var(--line); border-radius:12px; padding:14px; }
@@ -680,10 +714,7 @@
                 <span style="font-weight:900; text-transform:uppercase; font-size:0.85rem;">Exercices</span>
                 <span id="session-duration" style="font-weight:800; font-size:0.8rem; color:var(--wood);"></span>
             </div>
-            <table>
-                <thead><tr><th>Exercice</th><th>Consigne</th><th>Reps</th><th>Matériel</th></tr></thead>
-                <tbody id="tbody"></tbody>
-            </table>
+            <div id="session-ex-list"></div>
         </div>
 
         <div class="session-actions">
@@ -699,79 +730,54 @@
     </div>
 
     <div id="builder-screen" class="screen">
-        <div class="card">
-            <div class="header-box" style="margin-bottom:6px;">
-                <h1 class="screen-title">Construire</h1>
-            </div>
-            <p class="builder-lead">Compose ta propre séance de renfo, puis lance-la, planifie-la ou garde-la comme modèle.</p>
-
-            <div id="builder-session-wrap" style="display:none;">
-                <div class="modal-field" style="margin-bottom:14px;">
-                    <label for="builder-name">Nom de la séance</label>
-                    <input type="text" id="builder-name" class="text-input">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
-                    <span style="font-weight:900; text-transform:uppercase; font-size:0.9rem;">Ma séance · <span id="builder-count">0</span> exos</span>
-                    <span id="builder-duration" style="font-size:0.85rem; font-weight:800; color:var(--wood);"></span>
-                </div>
+        <div class="card bld-card">
+            <div class="bld-kicker" id="builder-kicker">Nouvelle séance</div>
+            <input type="text" id="builder-name" class="bld-title" aria-label="Nom de la séance">
+            <div class="bld-stats"><span id="builder-count">Aucun exercice</span><span id="builder-duration"></span></div>
+            <div id="builder-comp" style="display:none;">
                 <div class="comp-bar" id="builder-comp-bar"></div>
                 <div class="comp-legend" id="builder-comp-legend"></div>
-                <div class="table-card" style="border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:16px;">
-                    <div id="builder-session-list"></div>
-                </div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button class="action-btn primary" onclick="openExerciseSheet()">
-                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                        <span>Ajouter</span>
-                    </button>
-                    <button class="action-btn" onclick="openTemplateSheet()">
-                        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 20V9"/></svg>
-                        <span>Modèle</span>
-                    </button>
-                    <button class="action-btn" onclick="clearBuilder()" id="clear-builder-btn">
-                        <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                        <span>Vider</span>
-                    </button>
-                </div>
             </div>
-
-            <div id="builder-empty">
-                <div class="bi-steps">
-                    <div class="bi-step"><span class="bi-num">1</span><div><b>Choisis tes exercices</b><p>Dans ta bibliothèque, filtrable par catégorie, zone, matériel ou label.</p></div></div>
-                    <div class="bi-step"><span class="bi-num">2</span><div><b>Règle séries et reps</b><p>Choisis une variante si besoin, puis réordonne par glisser-déposer.</p></div></div>
-                    <div class="bi-step"><span class="bi-num">3</span><div><b>Lance ou planifie</b><p>Démarre la séance guidée, place-la dans le planning ou enregistre-la en modèle.</p></div></div>
-                </div>
-                <div class="bi-cta">
-                    <button class="action-btn primary" onclick="openExerciseSheet()">
-                        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                        <span>Ajouter des exercices</span>
-                    </button>
-                    <button class="action-btn" onclick="openTemplateSheet()">
-                        <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 20V9"/></svg>
-                        <span>Charger un modèle</span>
-                    </button>
-                </div>
-                <div id="builder-quick"></div>
+            <div class="bld-list" id="builder-session-list"></div>
+            <button class="bld-add" onclick="openExerciseSheet()">
+                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                <span>Ajouter des exercices</span>
+            </button>
+            <div class="bld-tools">
+                <button class="bld-link" onclick="openTemplateSheet()">Charger un modèle</button>
+                <button class="bld-link" onclick="clearBuilder()" id="clear-builder-btn" style="display:none;">Vider la séance</button>
+                <button class="bld-link" onclick="cancelBuilderEdit()" id="builder-cancel-edit" style="display:none;">Annuler la modification</button>
             </div>
         </div>
 
         <div class="card" id="builder-actions-card" style="display:none;">
-            <button class="nav-btn btn-full" onclick="launchBuiltSession()">Lancer maintenant</button>
-            <div class="modal-field" style="margin-top:16px;">
-                <label>Planifier pour le</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="date" id="builder-plan-date" class="text-input" style="flex-grow:1;">
-                    <button class="toggle-btn" onclick="planBuiltSession()">Planifier</button>
+            <div id="builder-actions-new">
+                <button class="nav-btn btn-full" onclick="launchBuiltSession()">Lancer maintenant</button>
+                <div class="modal-field" style="margin-top:16px;">
+                    <label>Planifier pour le</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="date" id="builder-plan-date" class="text-input" style="flex-grow:1;">
+                        <button class="toggle-btn" onclick="planBuiltSession()">Planifier</button>
+                    </div>
+                </div>
+                <div class="modal-field" style="margin-bottom:0;">
+                    <label>Enregistrer comme modèle</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="template-name" class="text-input" style="flex-grow:1;" placeholder="Nom du modèle">
+                        <button class="toggle-btn" onclick="saveTemplate()">Enregistrer</button>
+                    </div>
                 </div>
             </div>
-            <div class="modal-field" style="margin-bottom:0;">
-                <label>Enregistrer comme modèle</label>
-                <div style="display:flex; gap:10px;">
-                    <input type="text" id="template-name" class="text-input" style="flex-grow:1;" placeholder="Nom du modèle">
-                    <button class="toggle-btn" onclick="saveTemplate()">Enregistrer</button>
+            <div id="builder-actions-edit" style="display:none;">
+                <div class="modal-field">
+                    <label>Date</label>
+                    <input type="date" id="builder-edit-date" class="text-input">
                 </div>
+                <button class="nav-btn btn-full" onclick="saveBuilderEdit()">Enregistrer les modifications</button>
             </div>
         </div>
+
+        <div id="builder-quick"></div>
     </div>
 
     <div id="exercises-screen" class="screen">
@@ -1147,16 +1153,38 @@
 <div id="plan-modal">
     <h3 id="modal-date-title">Planifier</h3>
     <input type="hidden" id="modal-date-val">
-    
+
+    <div id="plan-existing" style="display:none;">
+        <div class="plan-card">
+            <div class="plan-card-title" id="plan-s-title"></div>
+            <div class="plan-card-sub" id="plan-s-sub"></div>
+        </div>
+        <div class="plan-btns">
+            <button class="action-btn primary" onclick="startPlannedSession()">
+                <svg viewBox="0 0 24 24" class="filled"><path d="M8 5v14l11-7z"/></svg><span>Démarrer</span>
+            </button>
+            <button class="action-btn" onclick="editPlannedSession()">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg><span>Modifier</span>
+            </button>
+        </div>
+        <div class="modal-field">
+            <label>Déplacer au</label>
+            <div style="display:flex; gap:8px;">
+                <input type="date" id="plan-move-date" class="text-input" style="flex-grow:1;">
+                <button class="toggle-btn" onclick="movePlannedSession()">Déplacer</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-field">
-        <label>Séance</label>
+        <label id="modal-session-label">Séance</label>
         <select id="modal-session" class="modal-select"></select>
     </div>
 
     <div class="modal-actions">
-        <button class="nav-btn btn-full" style="background:#28a745;" onclick="savePlan()">Enregistrer</button>
-        <button class="nav-btn btn-full" id="modal-start-btn" style="background:#000; display:none;" onclick="startPlannedSession()">Démarrer la séance</button>
-        <button class="toggle-btn btn-full" onclick="closePlanModal()">Annuler</button>
+        <button class="nav-btn btn-full" onclick="savePlan()">Enregistrer</button>
+        <button class="toggle-btn btn-full" id="plan-remove-btn" style="display:none; color:#c0533f; border-color:#c0533f;" onclick="removePlan()">Retirer du planning</button>
+        <button class="toggle-btn btn-full" onclick="closePlanModal()">Fermer</button>
     </div>
 </div>
 
@@ -1307,6 +1335,15 @@
         }
         if (label) return variants.some(v => v.label === label) ? variantName(base, label) : x.n;
         return base;
+    }
+
+    // Matériel d'un exercice de l'historique (anciennes séances : pris dans la bibliothèque)
+    function historyExoMat(x, bank) {
+        if (x.m) return x.m;
+        const cur = x.id ? findCurrentExercise(x.id, bank) : null;
+        if (!cur) return '';
+        const v = x.v && Array.isArray(cur.variants) ? cur.variants.find(vv => vv.label === x.v) : null;
+        return (v && v.m) || cur.m || '';
     }
 
     // Un exercice peut avoir plusieurs catégories (tags)
@@ -1769,11 +1806,21 @@
     function renderExercises() {
         const s = getData(currentId);
         if (!s) return;
-        let h = "";
-        s.ex.forEach(e => {
-            h += `<tr><td><b style="color:var(--ink)">${cleanName(e.n)}</b> ${catTagsHtml(e)}</td><td>${e.c || ""}</td><td><b>${e.r}</b></td><td>${e.m || ""}</td></tr>`;
-        });
-        document.getElementById('tbody').innerHTML = h;
+        document.getElementById('session-ex-list').innerHTML = s.ex.map((e, i) => {
+            const mat = e.m && e.m.toLowerCase() !== 'aucun' ? e.m : '';
+            return `
+            <div class="sx-item">
+                <span class="sx-num">${i + 1}</span>
+                <div class="sx-body">
+                    <div class="sx-head">
+                        <span class="sx-name">${cleanName(e.n)}</span>
+                        <span class="sx-reps">${e.r || ''}</span>
+                    </div>
+                    <div class="sx-meta">${catTagsHtml(e)}${mat ? `<span class="sx-mat">${mat}</span>` : ''}</div>
+                    ${e.c ? `<div class="sx-cons">${e.c}</div>` : ''}
+                </div>
+            </div>`;
+        }).join('');
         const durEl = document.getElementById('session-duration');
         if (durEl) durEl.innerText = "≈ " + fmtDuration(estimateListMinutes(s.ex));
     }
@@ -1897,12 +1944,21 @@
 
     function openPlanModal(dateStr, dayNum) {
         document.getElementById('modal-date-val').value = dateStr;
-        document.getElementById('modal-date-title').innerText = `Planning du ${dayNum} ${calDate.toLocaleDateString('fr-FR', {month: 'long'})}`;
         
-        let plan = plannedData[dateStr];
-        document.getElementById('modal-session').value = plan ? plan.id : "";
-        
-        document.getElementById('modal-start-btn').style.display = plan ? "block" : "none";
+        const plan = plannedData[dateStr];
+        const d = new Date(dateStr + 'T12:00:00');
+        document.getElementById('modal-date-title').innerText = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+        refreshModalSessionOptions();
+        document.getElementById('modal-session').value = "";
+        const s = plan ? getData(plan.id) : null;
+        document.getElementById('plan-existing').style.display = s ? 'block' : 'none';
+        document.getElementById('plan-remove-btn').style.display = plan ? 'block' : 'none';
+        document.getElementById('modal-session-label').innerText = s ? 'Remplacer par une autre séance' : 'Séance';
+        if (s) {
+            document.getElementById('plan-s-title').innerText = s.t;
+            document.getElementById('plan-s-sub').innerText = `${s.ex.length} exercices · ≈ ${fmtDuration(estimateListMinutes(s.ex))}`;
+            document.getElementById('plan-move-date').value = dateStr;
+        }
         document.getElementById('plan-modal').style.display = "block";
         document.getElementById('sidebar-overlay').style.display = "block";
     }
@@ -1921,13 +1977,49 @@
             id = storeSessionFromEx(getTemplateEx(id), getTemplateName(id));
         }
 
-        if(id === "" || !id) { delete plannedData[dateStr]; } 
-        else { plannedData[dateStr] = { id: id }; }
+        if (!id) { closePlanModal(); return; } // rien choisi : on ne touche pas au planning
+        plannedData[dateStr] = { id: id };
 
         persist('ultraPlan', plannedData);
         autoBackup();
         closePlanModal();
         renderCalendar();
+    }
+
+    function removePlan() {
+        const dateStr = document.getElementById('modal-date-val').value;
+        delete plannedData[dateStr];
+        persist('ultraPlan', plannedData);
+        autoBackup();
+        closePlanModal();
+        renderCalendar();
+    }
+
+    function movePlannedSession() {
+        const from = document.getElementById('modal-date-val').value;
+        const to = document.getElementById('plan-move-date').value;
+        if (!to || to === from || !plannedData[from]) return;
+        if (plannedData[to] && !confirm('Une séance est déjà planifiée ce jour-là. La remplacer ?')) return;
+        plannedData[to] = plannedData[from];
+        delete plannedData[from];
+        persist('ultraPlan', plannedData);
+        autoBackup();
+        closePlanModal();
+        calDate = new Date(to + 'T12:00:00');
+        renderCalendar();
+    }
+
+    // Ouvre la séance planifiée dans le constructeur pour la modifier
+    function editPlannedSession() {
+        const dateStr = document.getElementById('modal-date-val').value;
+        const plan = plannedData[dateStr];
+        const s = plan ? getData(plan.id) : null;
+        if (!s) return;
+        closePlanModal();
+        builderEdit = { id: plan.id, date: dateStr };
+        currentBuilderList = s.ex.map(e => ({ ...e }));
+        document.getElementById('builder-name').value = s.t;
+        switchScreen('builder-screen');
     }
 
     function startPlannedSession() {
@@ -2235,15 +2327,22 @@
 
     function renderBuilderSession() {
         const has = currentBuilderList.length > 0;
-        document.getElementById('builder-session-wrap').style.display = has ? 'block' : 'none';
-        document.getElementById('builder-empty').style.display = has ? 'none' : 'block';
-        document.getElementById('builder-actions-card').style.display = has ? 'block' : 'none';
-        if (!has) { renderBuilderQuick(); return; }
+        const n = currentBuilderList.length;
         document.getElementById('builder-name').placeholder = defaultSessionName();
-
-        document.getElementById('builder-count').innerText = currentBuilderList.length;
-        const durEl = document.getElementById('builder-duration');
-        if (durEl) durEl.innerText = "≈ " + fmtDuration(estimateListMinutes(currentBuilderList));
+        document.getElementById('builder-kicker').innerText = builderEdit
+            ? `Modifier la séance du ${new Date(builderEdit.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+            : 'Nouvelle séance';
+        document.getElementById('builder-count').innerText = has ? `${n} exercice${n > 1 ? 's' : ''}` : 'Aucun exercice';
+        document.getElementById('builder-duration').innerText = has ? "≈ " + fmtDuration(estimateListMinutes(currentBuilderList)) : '';
+        document.getElementById('builder-comp').style.display = has ? 'block' : 'none';
+        document.getElementById('clear-builder-btn').style.display = has ? 'inline' : 'none';
+        document.getElementById('builder-cancel-edit').style.display = builderEdit ? 'inline' : 'none';
+        document.getElementById('builder-actions-card').style.display = (has || builderEdit) ? 'block' : 'none';
+        document.getElementById('builder-actions-new').style.display = builderEdit ? 'none' : 'block';
+        document.getElementById('builder-actions-edit').style.display = builderEdit ? 'block' : 'none';
+        if (builderEdit) document.getElementById('builder-edit-date').value = document.getElementById('builder-edit-date').value || builderEdit.date;
+        renderBuilderQuick();
+        if (!has) { document.getElementById('builder-session-list').innerHTML = ''; return; }
         renderCompositionBar('builder-comp-bar', 'builder-comp-legend', currentBuilderList);
 
         document.getElementById('builder-session-list').innerHTML = currentBuilderList.map((e, idx) => `
@@ -2790,6 +2889,44 @@
         return id;
     }
 
+    let builderEdit = null; // { id, date } quand on modifie une séance planifiée
+
+    function cancelBuilderEdit() {
+        builderEdit = null;
+        currentBuilderList = [];
+        document.getElementById('builder-name').value = '';
+        document.getElementById('builder-edit-date').value = '';
+        switchScreen('calendar-screen');
+    }
+
+    function saveBuilderEdit() {
+        if (!builderEdit || !currentBuilderList.length) return;
+        const { id, date } = builderEdit;
+        const newDate = document.getElementById('builder-edit-date').value || date;
+        const name = document.getElementById('builder-name').value.trim();
+        let sid = id;
+        if (customSessions[id]) {
+            const comp = computeComposition(currentBuilderList);
+            const compText = CAT_LIST.filter(c => comp.pct[c] > 0).map(c => `${comp.pct[c]}% ${CAT_LABELS[c].split('/')[0]}`).join(' · ');
+            customSessions[id] = { ...customSessions[id], t: name || customSessions[id].t, resume: `Composition : ${compText}.`, ex: currentBuilderList.map(e => ({ ...e })) };
+            saveCustomSessions();
+            refreshModalSessionOptions();
+        } else {
+            // Séance d'origine : on planifie une copie modifiée
+            sid = storeSessionFromEx(currentBuilderList, name || (getData(id) || {}).t);
+        }
+        delete plannedData[date];
+        plannedData[newDate] = { id: sid };
+        persist('ultraPlan', plannedData);
+        autoBackup();
+        builderEdit = null;
+        currentBuilderList = [];
+        document.getElementById('builder-name').value = '';
+        document.getElementById('builder-edit-date').value = '';
+        calDate = new Date(newDate + 'T12:00:00');
+        switchScreen('calendar-screen');
+    }
+
     function storeBuiltSession() {
         const nameEl = document.getElementById('builder-name');
         const name = nameEl.value.trim();
@@ -2807,10 +2944,11 @@
             item(`loadTemplate('${id}')`, customTemplates[id].name, `Modèle · ${customTemplates[id].ex.length} exercices`));
         const recent = history.map((h, idx) => ({ h, idx })).filter(({ h }) => h.exos && h.exos.length).slice(0, 4).map(({ h, idx }) =>
             item(`loadHistoryInBuilder(${idx})`, h.title, `${fmtHistDate(h.date)} · ${h.exos.length} exercices`));
+        if (currentBuilderList.length || builderEdit || (!recent.length && !tpls.length)) { el.innerHTML = ''; return; }
         let html = '';
-        if (recent.length) html += `<div class="bi-quick-title">Repartir d'une séance récente</div><div class="bi-quick">${recent.join('')}</div>`;
-        if (tpls.length) html += `<div class="bi-quick-title">Tes modèles</div><div class="bi-quick">${tpls.join('')}</div>`;
-        el.innerHTML = html;
+        if (recent.length) html += `<div class="bi-quick-title" style="margin-top:0;">Ou repars d'une séance récente</div><div class="bi-quick">${recent.join('')}</div>`;
+        if (tpls.length) html += `<div class="bi-quick-title">Ou d'un modèle</div><div class="bi-quick">${tpls.join('')}</div>`;
+        el.innerHTML = `<div class="card">${html}</div>`;
     }
 
     // Charge les exercices d'une séance de l'historique dans le constructeur (à modifier avant de lancer)
@@ -3004,7 +3142,7 @@
     // Résumé texte de la séance (mêmes infos que l'image, selon les options de contenu)
     function buildSessionSummaryText(entry, opts) {
         const bank = getExerciseBank();
-        const ex = (entry.exos && entry.exos.length) ? entry.exos.map(e => ({ ...e, n: historyExoName(e, bank) }))
+        const ex = (entry.exos && entry.exos.length) ? entry.exos.map(e => ({ ...e, n: historyExoName(e, bank), m: historyExoMat(e, bank) }))
             : (entry.ex || []).map(e => ({ n: cleanName(e.n), r: e.r || '', m: e.m || '' }));
         const lines = [];
         let head = `${ex.length} exercice${ex.length > 1 ? "s" : ""}`;
@@ -3013,7 +3151,7 @@
             else if (entry.ex) head += ` · ≈ ${fmtDuration(estimateListMinutes(entry.ex))}`;
         }
         lines.push(head);
-        if (opts.fc && entry.hr) lines.push(`♥ ${entry.hr.avg} bpm moy · ${entry.hr.max} max`);
+        if (opts.fc && entry.hr) lines.push(`FC ${entry.hr.avg} bpm moy · ${entry.hr.max} max`);
         if (opts.repartition) {
             const counts = entry.comp || computeComposition(entry.ex || []).counts;
             const total = CAT_LIST.reduce((a, c) => a + (counts[c] || 0), 0) || 1;
@@ -3900,7 +4038,7 @@
         let ex = [];
         if (h.exos && h.exos.length) {
             const bank = getExerciseBank();
-            ex = h.exos.map(e => ({ n: historyExoName(e, bank), id: e.id, r: e.r || '', m: e.m || '' }));
+            ex = h.exos.map(e => ({ n: historyExoName(e, bank), id: e.id, r: e.r || '', m: historyExoMat(e, bank) }));
         } else if (getData(h.id)) {
             ex = getData(h.id).ex.map(e => ({ n: cleanName(e.n), r: e.r || '' }));
         }
