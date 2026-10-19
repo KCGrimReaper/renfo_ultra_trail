@@ -1,4 +1,4 @@
-const CACHE_NAME = 'renfo-ultra-trail-v53';
+const CACHE_NAME = 'renfo-ultra-trail-v54';
 const APP_SHELL = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', (event) => {

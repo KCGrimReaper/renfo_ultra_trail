@@ -147,7 +147,7 @@
         /* Chips compactes dans le formulaire d'exercice */
         #ex-modal .chip-row { gap: 6px; }
         .chip-add { border-style: dashed; color: var(--stone); }
-        .exm-labels { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+        .exm-sub .ex-label { margin-left:6px; vertical-align:1px; padding:1px 7px; }
         .ex-label { display:inline-block; font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:20px; background: var(--bg); border:1px solid var(--line); color: var(--wood); }
         .chip-input { width: 160px; padding: 7px 10px; font-size: 0.8rem; font-weight: 700; }
         #ex-modal .chip { padding: 5px 10px; font-size: 0.7rem; font-weight: 700; text-transform: none; border-radius: 7px; }
@@ -2644,8 +2644,7 @@
             <div class="exm-item" onclick="openExerciseDetail('${e.id}')">
                 <div class="exm-main">
                     <span class="exm-name">${cleanName(e.n)} ${freq}</span>
-                    ${zones ? `<span class="exm-sub">${zones}</span>` : ""}
-                    ${a.tags.length ? `<span class="exm-labels">${a.tags.map(t => `<span class="ex-label">${t}</span>`).join('')}</span>` : ""}
+                    ${(zones || a.tags.length) ? `<span class="exm-sub">${zones}${a.tags.map(t => `<span class="ex-label">${t}</span>`).join('')}</span>` : ""}
                 </div>
                 <span class="exm-tags">${catTagsHtml(e)}</span>
                 ${chevron}
