@@ -141,6 +141,8 @@
         /* Chips compactes dans le formulaire d'exercice */
         #ex-modal .chip-row { gap: 6px; }
         .chip-add { border-style: dashed; color: var(--stone); }
+        .exm-labels { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+        .ex-label { display:inline-block; font-size:0.65rem; font-weight:800; padding:2px 8px; border-radius:20px; background: var(--bg); border:1px solid var(--line); color: var(--wood); }
         .chip-input { width: 160px; padding: 7px 10px; font-size: 0.8rem; font-weight: 700; }
         #ex-modal .chip { padding: 5px 10px; font-size: 0.7rem; font-weight: 700; text-transform: none; border-radius: 7px; }
         #ex-modal .modal-field { margin-bottom: 12px; }
@@ -990,6 +992,10 @@
         <div class="chip-row" id="nex-uni-chips" style="margin-bottom:0;"></div>
     </div>
     <div class="modal-field">
+        <label>Labels</label>
+        <div class="chip-row" id="nex-tag-chips" style="margin-bottom:0;"></div>
+    </div>
+    <div class="modal-field">
         <label>Consigne</label>
         <textarea id="nex-consigne" class="text-input" rows="4" placeholder="Ex : dos plat, descente lente sur 3 secondes, regard à l'horizon..." style="resize:vertical; min-height:90px; font-family:inherit;"></textarea>
     </div>
@@ -1287,9 +1293,18 @@
             equip: e.equip || seed.equip || [],
             zones: e.zones || seed.zones || [],
             uni: e.uni || seed.uni || null,
-            goals: e.goals || seed.goals || []
+            goals: e.goals || seed.goals || [],
+            tags: e.tags || []
         };
     }
+
+    // Labels libres : tous ceux utilisés par au moins un exercice (+ extra)
+    function allTagList(extra) {
+        const set = new Set(extra || []);
+        getExerciseBank().forEach(e => (e.tags || []).forEach(t => set.add(t)));
+        return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+    }
+    const TAG_LABELS = new Proxy({}, { get: (_, k) => k });
 
     function catTagsHtml(e) {
         return getCats(e).map(c => `<span class="cat-tag cat-${c}">${CAT_LABELS[c]}</span>`).join(" ");
@@ -1297,17 +1312,19 @@
 
     // === FILTRES AVANCÉS (partagés catalogue construire + gestionnaire) ===
     function makeFilterState() {
-        return { cats: new Set(), equip: new Set(), zones: new Set(), goals: new Set(), uni: new Set() };
+        return { cats: new Set(), equip: new Set(), zones: new Set(), goals: new Set(), uni: new Set(), tags: new Set() };
     }
 
     function exerciseMatchesFilter(e, f, q) {
-        if (q && !cleanName(e.n).toLowerCase().includes(q) && !(e.c || "").toLowerCase().includes(q)) return false;
+        if (q && !cleanName(e.n).toLowerCase().includes(q) && !(e.c || "").toLowerCase().includes(q)
+            && !(e.tags || []).some(t => t.toLowerCase().includes(q))) return false;
         if (f.cats.size && !getCats(e).some(c => f.cats.has(c))) return false;
         const a = getAttrs(e);
         if (f.equip.size && !a.equip.some(x => f.equip.has(x))) return false;
         if (f.zones.size && !a.zones.some(x => f.zones.has(x))) return false;
         if (f.goals.size && !a.goals.some(x => f.goals.has(x))) return false;
         if (f.uni.size && (!a.uni || !f.uni.has(a.uni))) return false;
+        if (f.tags && f.tags.size && !a.tags.some(x => f.tags.has(x))) return false;
         return true;
     }
 
@@ -1316,7 +1333,8 @@
         { key: 'goals', label: 'Objectif',    list: GOAL_LIST,  labels: GOAL_LABELS },
         { key: 'zones', label: 'Zone',        list: ZONE_LIST,  labels: ZONE_LABELS },
         { key: 'equip', label: 'Matériel',    get list() { return allEquipList(); }, labels: EQUIP_LABELS },
-        { key: 'uni',   label: 'Latéralité',  list: ['uni','bi'], labels: UNI_LABELS }
+        { key: 'uni',   label: 'Latéralité',  list: ['uni','bi'], labels: UNI_LABELS },
+        { key: 'tags',  label: 'Labels',      get list() { return allTagList(); }, labels: TAG_LABELS }
     ];
 
     const CHECK_SVG = `<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>`;
@@ -1326,7 +1344,7 @@
         if (!el) return;
 
         el.className = 'filter-bar';
-        el.innerHTML = FILTER_AXES.map(ax => {
+        el.innerHTML = FILTER_AXES.filter(ax => ax.list.length && filterState[ax.key]).map(ax => {
             const set = filterState[ax.key];
             const n = set.size;
             const opts = ax.list.map(k => `
@@ -1383,11 +1401,11 @@
     });
 
     function filterActiveCount(f) {
-        return f.cats.size + f.equip.size + f.zones.size + f.goals.size + f.uni.size;
+        return f.cats.size + f.equip.size + f.zones.size + f.goals.size + f.uni.size + (f.tags ? f.tags.size : 0);
     }
 
     function clearFilter(f) {
-        f.cats.clear(); f.equip.clear(); f.zones.clear(); f.goals.clear(); f.uni.clear();
+        f.cats.clear(); f.equip.clear(); f.zones.clear(); f.goals.clear(); f.uni.clear(); if (f.tags) f.tags.clear();
     }
 
     // --- DURÉE ESTIMÉE ---
@@ -1637,6 +1655,9 @@
         if(screenId === 'exercises-screen') renderExerciseManager();
         if(screenId === 'history-screen') renderHistoryScreen();
         if(screenId === 'settings-screen') { renderAmbiancePicker(); renderPlaylistManager(); renderStravaSettings(); }
+        // Filtres : la liste du matériel perso et des labels peut avoir changé
+        if(screenId === 'exercises-screen') initExmCatChips();
+        if(screenId === 'builder-screen') initCatChips();
         window.scrollTo(0, 0);
     }
 
@@ -1861,7 +1882,7 @@
 
     // --- MODALE EXERCICE (création + édition) ---
     // États des sélections dans la modale
-    let nexSel = { cats: new Set(), goals: new Set(), zones: new Set(), equip: new Set(), uni: new Set() };
+    let nexSel = { cats: new Set(), goals: new Set(), zones: new Set(), equip: new Set(), uni: new Set(), tags: new Set() };
 
     function initNexChips() {
         const build = (containerId, list, labels, setKey) => {
@@ -1890,25 +1911,31 @@
         build('nex-uni-chips', ["uni", "bi"], UNI_LABELS, 'uni');
     }
 
-    // Chips matériel de la modale : base + perso + bouton d'ajout libre
-    function renderNexEquipChips() {
-        const el = document.getElementById('nex-equip-chips');
+    // Chips à saisie libre de la modale (matériel, labels) : liste existante + bouton « + Ajouter »
+    const NEX_FREE = {
+        equip: { el: 'nex-equip-chips', list: (x) => allEquipList(x), label: (k) => EQUIP_LABELS[k], key: (l) => 'x:' + l, ph: 'Ex : Kettlebell' },
+        tags:  { el: 'nex-tag-chips',   list: (x) => allTagList(x),   label: (k) => k,                key: (l) => l,        ph: 'Ex : Échauffement' }
+    };
+    function renderNexEquipChips() { renderNexFreeChips('equip'); renderNexFreeChips('tags'); }
+    function renderNexFreeChips(axis) {
+        const cfg = NEX_FREE[axis], sel = nexSel[axis];
+        const el = document.getElementById(cfg.el);
         if (!el) return;
-        const list = allEquipList([...nexSel.equip]);
-        el.innerHTML = list.map(k => `<button type="button" class="chip${nexSel.equip.has(k) ? ' active' : ''}" data-k="${k.replace(/"/g, '&quot;')}" data-axis="equip"></button>`).join("")
-            + `<button type="button" class="chip chip-add" id="nex-equip-add">+ Ajouter</button>`;
-        el.querySelectorAll('.chip[data-k]').forEach((btn, i) => {
-            btn.textContent = EQUIP_LABELS[list[i]];
+        const list = cfg.list([...sel]);
+        el.innerHTML = list.map(k => `<button type="button" class="chip${sel.has(k) ? ' active' : ''}"></button>`).join("")
+            + `<button type="button" class="chip chip-add">+ Ajouter</button>`;
+        el.querySelectorAll('.chip:not(.chip-add)').forEach((btn, i) => {
+            const k = list[i];
+            btn.textContent = cfg.label(k);
             btn.onclick = () => {
-                const k = list[i];
-                nexSel.equip.has(k) ? nexSel.equip.delete(k) : nexSel.equip.add(k);
-                btn.classList.toggle('active', nexSel.equip.has(k));
+                sel.has(k) ? sel.delete(k) : sel.add(k);
+                btn.classList.toggle('active', sel.has(k));
             };
         });
-        document.getElementById('nex-equip-add').onclick = () => {
-            const add = document.getElementById('nex-equip-add');
+        const add = el.querySelector('.chip-add');
+        add.onclick = () => {
             const input = document.createElement('input');
-            input.type = 'text'; input.className = 'text-input chip-input'; input.placeholder = 'Ex : Kettlebell';
+            input.type = 'text'; input.className = 'text-input chip-input'; input.placeholder = cfg.ph;
             add.replaceWith(input);
             input.focus();
             let done = false;
@@ -1916,11 +1943,11 @@
                 if (done) return; done = true;
                 const label = input.value.replace(/[<>"'&]/g, '').trim().replace(/\s+/g, ' ').slice(0, 30);
                 if (label) {
-                    // Réutilise le matériel existant si même libellé (base ou perso)
-                    const same = allEquipList([...nexSel.equip]).find(k => EQUIP_LABELS[k].toLowerCase() === label.toLowerCase());
-                    nexSel.equip.add(same || 'x:' + label);
+                    // Réutilise l'entrée existante si même libellé
+                    const same = cfg.list([...sel]).find(k => cfg.label(k).toLowerCase() === label.toLowerCase());
+                    sel.add(same || cfg.key(label));
                 }
-                renderNexEquipChips();
+                renderNexFreeChips(axis);
             };
             input.onkeydown = (ev) => {
                 if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
@@ -1939,7 +1966,7 @@
     }
 
     function resetNexSel() {
-        nexSel = { cats: new Set(), goals: new Set(), zones: new Set(), equip: new Set(), uni: new Set() };
+        nexSel = { cats: new Set(), goals: new Set(), zones: new Set(), equip: new Set(), uni: new Set(), tags: new Set() };
     }
 
     function openNewExForm() {
@@ -1970,7 +1997,8 @@
             goals: new Set(a.goals),
             zones: new Set(a.zones),
             equip: new Set(a.equip),
-            uni: new Set(a.uni ? [a.uni] : [])
+            uni: new Set(a.uni ? [a.uni] : []),
+            tags: new Set(a.tags)
         };
         syncNexChips();
         renderNexEquipChips();
@@ -2230,6 +2258,7 @@
             zones: [...nexSel.zones],
             equip: equip,
             uni: [...nexSel.uni][0] || null,
+            tags: [...nexSel.tags],
             c: document.getElementById('nex-consigne').value.trim(),
             m: mDisplay
         };
@@ -2247,6 +2276,7 @@
             customExercises.push({ ...payload, id: 'U' + Date.now(), r: "3x10", userCreated: true });
         }
         saveCustomExercises();
+        initExmCatChips(); initCatChips();
         const created = !editingExerciseId;
         editingExerciseId = null;
         closeExModal();
@@ -2311,6 +2341,7 @@
                 <div class="exm-main">
                     <span class="exm-name">${cleanName(e.n)} ${freq}</span>
                     ${zones ? `<span class="exm-sub">${zones}</span>` : ""}
+                    ${a.tags.length ? `<span class="exm-labels">${a.tags.map(t => `<span class="ex-label">${t}</span>`).join('')}</span>` : ""}
                 </div>
                 <span class="exm-tags">${catTagsHtml(e)}</span>
                 ${chevron}
@@ -2375,6 +2406,7 @@
                 ${line("Zone", a.zones.map(z => ZONE_LABELS[z]).join(", "))}
                 ${line("Matériel", hasMat ? e.m : "Aucun")}
                 ${line("Latéralité", a.uni ? UNI_LABELS[a.uni] : "")}
+                ${line("Labels", a.tags.map(t => `<span class="ex-label">${t}</span>`).join(' '))}
                 ${statsHtml}
                 ${variantsHtml}
                 <div class="detail-actions">
