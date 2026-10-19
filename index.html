@@ -174,9 +174,40 @@
         .search-row .text-input { flex-grow:1; width:auto; }
 
         /* --- HISTORIQUE --- */
-        .hist-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-        .hist-date { font-weight:900; font-size:0.85rem; min-width:90px; }
-        .hist-title { flex-grow:1; font-weight:700; padding: 0 10px; }
+        .hist-month { display:flex; justify-content:space-between; align-items:baseline; padding: 22px 20px 8px; }
+        .hist-month:first-child { padding-top: 6px; }
+        .hist-month .hm-name { font-weight:900; text-transform:uppercase; font-size:0.8rem; letter-spacing:0.5px; color: var(--ink); }
+        .hist-month .hm-count { font-weight:700; font-size:0.75rem; color: var(--muted); }
+        .hist-item { display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid var(--line); }
+        .hist-item:hover { background: #fbf9f5; }
+        .hist-item .agenda-date { width:46px; }
+        .hist-info { flex-grow:1; min-width:0; }
+        .hist-name { font-weight:800; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .hist-meta { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; margin-top:5px; font-size:0.78rem; font-weight:700; color: var(--stone); }
+        .hist-meta .hm-hr { color: #c0533f; }
+        .hist-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+        .hist-pub { display:inline-flex; align-items:center; gap:7px; background: var(--ink); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-weight:800; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.3px; cursor:pointer; }
+        .hist-pub:hover { background: var(--wood); }
+        .hist-pub svg, .icon-btn svg { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+        .icon-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:34px; height:34px; padding:0 8px; border-radius:8px; border:1px solid var(--line); background:#fff; color: var(--ink); cursor:pointer; font-weight:800; font-size:0.7rem; text-transform:uppercase; }
+        .icon-btn:hover { border-color: var(--ink); }
+        .icon-btn.danger:hover, .icon-btn.confirm { border-color:#c0533f; color:#c0533f; }
+        @media (max-width: 640px) {
+            .hist-item { flex-wrap:wrap; padding:14px 16px; }
+            .hist-info { flex-basis: calc(100% - 60px); }
+            .hist-actions { width:100%; padding-left:60px; }
+            .hist-pub { flex-grow:1; justify-content:center; }
+        }
+        /* Interrupteur on/off */
+        .switch-row { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:6px 0; cursor:pointer; }
+        .switch-row .sw-text { font-weight:600; font-size:0.9rem; color: var(--ink); }
+        .switch-row .sw-sub { display:block; font-size:0.75rem; color: var(--stone); font-weight:600; margin-top:2px; }
+        .switch { position:relative; flex-shrink:0; width:44px; height:26px; }
+        .switch input { opacity:0; width:0; height:0; position:absolute; }
+        .switch .sw-track { position:absolute; inset:0; background: var(--line); border-radius:26px; transition:0.2s; }
+        .switch .sw-track::after { content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition:0.2s; }
+        .switch input:checked + .sw-track { background:#fc4c02; }
+        .switch input:checked + .sw-track::after { transform: translateX(18px); }
 
         /* --- REGLAGES --- */
         .settings-row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:15px; }
@@ -865,7 +896,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-head">
         <div class="sheet-head-top">
-            <h3>Partager la séance</h3>
+            <h3>Publication</h3>
             <button class="sheet-close" onclick="closeShareSheet()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         </div>
     </div>
@@ -901,10 +932,18 @@
                         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                         <span>Télécharger</span>
                     </a>
-                    <button class="action-btn" id="share-strava-desc" onclick="publishShareToStravaDesc()" style="flex-basis:100%;">
-                        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-                        <span>Strava : résumé en description</span>
-                    </button>
+                </div>
+                <div class="share-section">
+                    <div class="share-section-title">Strava</div>
+                    <label class="switch-row">
+                        <span class="sw-text">Résumé dans la description<span class="sw-sub">Les infos cochées ci-dessus sont écrites dans la description de l'activité</span></span>
+                        <span class="switch"><input type="checkbox" id="opt-strava-desc" onchange="setStravaDesc(this.checked)"><span class="sw-track"></span></span>
+                    </label>
+                    <div class="share-actions" style="margin-top:10px;">
+                        <button class="action-btn" id="share-strava-btn" onclick="publishShareToStrava()" style="flex-basis:100%; justify-content:center; background:#fc4c02; color:#fff; border-color:#fc4c02;">
+                            <span>Publier sur Strava</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1438,17 +1477,10 @@
         history.unshift(entry);
         saveHistory();
         goHome();
-        const stravaOn = strava && strava.refresh_token;
-        if (stravaOn && stravaEndMode === 'desc') {
-            // Résumé dans la description Strava à la place de l'image
-            stravaModalLoading();
-            publishToStrava(entry, true).then(ok => stravaModalResult(ok, ok ? 'Le résumé de la séance est dans la description de ton activité.' : (lastStravaError || 'Strava a refusé la publication.'), null));
-        } else {
-            // Propose l'image résumé à partager (avec durée réelle + FC)
-            openSessionImage({ t: s.t, ex: s.ex, comp: comp.counts, realSec: entry.realSec, hr: entry.hr });
-            // Publication auto sur Strava si activée
-            if (stravaOn && stravaEndMode === 'image+strava') publishToStrava(entry, true);
-        }
+        // Propose la fenêtre Publication (image + Strava)
+        openSessionImage({ t: s.t, ex: s.ex, comp: comp.counts, realSec: entry.realSec, hr: entry.hr });
+        // Publication auto sur Strava si activée
+        if (stravaAuto && strava && strava.refresh_token) publishToStrava(entry, true);
         // Réinitialise le chrono
         clearInterval(clockTimer); sessionStartTs = null;
         setTimeout(() => { sessionDoneLock = false; }, 1500);
@@ -2603,8 +2635,11 @@
     const STRAVA_FN = '/.netlify/functions/strava';
     const STRAVA_RELAY = 'https://trailplannerpro.com/strava-relay/'; // relais dans Trail Planner Pro
     let strava = JSON.parse(localStorage.getItem('ultraStrava') || 'null'); // { refresh_token, athlete }
-    // Fin de séance : 'image' | 'image+strava' (publication auto) | 'desc' (résumé dans la description, sans image)
-    let stravaEndMode = localStorage.getItem('ultraStravaEndMode') || (localStorage.getItem('ultraStravaAuto') === '1' ? 'image+strava' : 'image');
+    if (localStorage.getItem('ultraStravaEndMode') === 'desc') { localStorage.setItem('ultraStravaAuto', '1'); localStorage.setItem('ultraStravaDesc', '1'); }
+    localStorage.removeItem('ultraStravaEndMode');
+    let stravaAuto = localStorage.getItem('ultraStravaAuto') === '1';
+    // Résumé de la séance (infos de l'image) écrit dans la description de l'activité
+    let stravaDesc = localStorage.getItem('ultraStravaDesc') === '1';
     let lastStravaError = '';
 
     function saveStrava(t) { strava = t; localStorage.setItem('ultraStrava', JSON.stringify(t)); }
@@ -2662,12 +2697,12 @@
     }
 
     // Publie une séance sur Strava. 'entry' = objet d'historique (ou séance courante)
-    // summaryOpts : force le résumé complet en description avec ces options de contenu
+    // summaryOpts : options de contenu du résumé (par défaut celles mémorisées)
     async function publishToStrava(entry, silent, summaryOpts) {
         if (!strava || !strava.refresh_token) { if (!silent) setStravaStatus('Connecte Strava d\'abord.', true); return; }
         const durationSec = entry.realSec || (entry.ex ? estimateListMinutes(entry.ex) * 60 : 1800);
         let desc = '';
-        if (summaryOpts || stravaEndMode === 'desc') desc = buildSessionSummaryText(entry, summaryOpts || loadShareOptions());
+        if (stravaDesc) desc = buildSessionSummaryText(entry, summaryOpts || loadShareOptions());
         else {
             if (entry.exos && entry.exos.length) desc = entry.exos.map(e => '· ' + e.n).join('\n');
             else if (entry.ex && entry.ex.length) desc = entry.ex.map(e => '· ' + cleanName(e.n)).join('\n');
@@ -2718,10 +2753,17 @@
         } catch (e) { lastStravaError = String(e); if (!silent) setStravaStatus('Strava : ' + e, true); return false; }
     }
 
-    function setStravaEndMode(mode) {
-        stravaEndMode = mode;
-        localStorage.setItem('ultraStravaEndMode', mode);
+    function toggleStravaAuto() {
+        stravaAuto = !stravaAuto;
+        localStorage.setItem('ultraStravaAuto', stravaAuto ? '1' : '0');
         renderStravaSettings();
+    }
+    function setStravaDesc(on) {
+        stravaDesc = on;
+        localStorage.setItem('ultraStravaDesc', on ? '1' : '0');
+        const a = document.getElementById('opt-strava-desc'), b = document.getElementById('set-strava-desc');
+        if (a) a.checked = on;
+        if (b) b.checked = on;
     }
 
     // Résumé texte de la séance (mêmes infos que l'image, selon les options de contenu)
@@ -2763,12 +2805,11 @@
             const who = strava.athlete && strava.athlete.firstname ? ' (' + strava.athlete.firstname + ')' : '';
             box.innerHTML = `
                 <p style="font-weight:600;">Connecté à Strava${who}. Tes séances sont publiées comme activité « Entraînement ».</p>
-                <div style="font-weight:800; margin-top:10px;">À la fin de la séance</div>
-                ${[['image', "Proposer l'image résumé"],
-                   ['image+strava', "Proposer l'image résumé + publier automatiquement sur Strava"],
-                   ['desc', "Publier automatiquement sur Strava avec le résumé dans la description (pas d'image)"]]
-                  .map(([v, l]) => `<label class="share-opt" style="padding:6px 0;"><input type="radio" name="strava-end-mode" ${stravaEndMode === v ? 'checked' : ''} onchange="setStravaEndMode('${v}')"> <span>${l}</span></label>`).join('')}
-                <p style="font-size:0.8rem; color:var(--stone); font-weight:600; margin-top:4px;">Le contenu du résumé suit les options « Contenu » de la fenêtre de partage d'image.</p>
+                <label class="share-opt" style="padding:8px 0;"><input type="checkbox" ${stravaAuto ? 'checked' : ''} onchange="toggleStravaAuto()"> <span>Publier automatiquement à la fin de chaque séance</span></label>
+                <label class="switch-row" style="max-width:520px;">
+                    <span class="sw-text">Résumé dans la description<span class="sw-sub">Infos de l'image (selon les options « Contenu » de la fenêtre Publication)</span></span>
+                    <span class="switch"><input type="checkbox" id="set-strava-desc" ${stravaDesc ? 'checked' : ''} onchange="setStravaDesc(this.checked)"><span class="sw-track"></span></span>
+                </label>
                 <div class="settings-row" style="margin-top:10px;">
                     <button class="toggle-btn" onclick="stravaLogout()">Déconnecter Strava</button>
                 </div>`;
@@ -3210,6 +3251,7 @@
     function openSessionImage(session) {
         _shareSession = session;
         applySavedShareOptions();
+        document.getElementById('opt-strava-desc').checked = stravaDesc;
         renderShareThemeChips();
         renderShareCanvas();
         document.getElementById('sheet-overlay').classList.add('open');
@@ -3221,8 +3263,8 @@
         if (!document.querySelector('.sheet.open')) document.getElementById('sheet-overlay').classList.remove('open');
     }
 
-    // Publie la séance affichée sur Strava, avec les infos de l'image écrites dans la description
-    function publishShareToStravaDesc() {
+    // Publie la séance affichée sur Strava (description = résumé si le toggle est activé)
+    function publishShareToStrava() {
         if (!_shareSession) return;
         if (!strava || !strava.refresh_token) {
             closeShareSheet();
@@ -3230,7 +3272,7 @@
             setTimeout(() => setStravaStatus('Connecte Strava ci-dessus, puis réessaie.', true), 100);
             return;
         }
-        const btn = document.getElementById('share-strava-desc');
+        const btn = document.getElementById('share-strava-btn');
         if (btn.disabled) return;
         btn.disabled = true;
         const session = _shareSession, opts = readShareOptions();
@@ -3238,7 +3280,8 @@
         stravaModalLoading();
         publishToStrava(session, true, opts).then(ok => {
             btn.disabled = false;
-            stravaModalResult(ok, ok ? 'Le résumé de la séance est dans la description de ton activité.' : (lastStravaError || 'Strava a refusé la publication.'), null);
+            const msg = ok ? (stravaDesc ? 'Le résumé de la séance est dans la description de ton activité.' : null) : (lastStravaError || 'Strava a refusé la publication.');
+            stravaModalResult(ok, msg, stravaDesc ? null : session);
         });
     }
 
@@ -3459,6 +3502,10 @@
         return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
     }
 
+    const ICON_SHARE = '<svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13"/></svg>';
+    const ICON_REPLAY = '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8M3 3v5h5"/></svg>';
+    const ICON_TRASH = '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>';
+
     function renderHistoryScreen() {
         const listEl = document.getElementById('history-list');
         if (history.length === 0) {
@@ -3478,24 +3525,32 @@
             listEl.innerHTML = Object.keys(groups).sort().reverse().map(key => {
                 const rows = groups[key].map(({ h, idx }) => {
                     const dom = historyDominant(h);
-                    const tag = dom ? `<span class="cat-tag cat-${dom}">${CAT_LABELS[dom]}</span>` : "";
-                    // Sous-infos : durée réelle + FC
-                    const sub = [];
-                    if (h.realSec) sub.push(`⏱ ${fmtDuration(Math.round(h.realSec / 60))}`);
-                    if (h.hr) sub.push(`♥ ${h.hr.avg} moy · ${h.hr.max} max`);
-                    const subHtml = sub.length ? `<div class="ex-row-sub" style="width:100%; padding-left:0;">${sub.join(' · ')}</div>` : '';
+                    const d = new Date(h.date + 'T12:00:00');
+                    // Méta : catégorie dominante, nb d'exos, durée réelle, FC
+                    const meta = [];
+                    if (dom) meta.push(`<span class="cat-tag cat-${dom}">${CAT_LABELS[dom]}</span>`);
+                    if (h.exos && h.exos.length) meta.push(`<span>${h.exos.length} exo${h.exos.length > 1 ? 's' : ''}</span>`);
+                    if (h.realSec) meta.push(`<span>⏱ ${fmtDuration(Math.round(h.realSec / 60))}</span>`);
+                    if (h.hr) meta.push(`<span class="hm-hr">♥ ${h.hr.avg} moy · ${h.hr.max} max</span>`);
                     return `
-                        <div class="hist-row" style="flex-wrap:wrap;">
-                            <span class="hist-date">${fmtHistDate(h.date)}</span>
-                            <span class="hist-title">${h.title} ${tag}</span>
-                            <button class="mini-btn" onclick="shareHistoryEntry(${idx})">Image</button>
-                            <button class="mini-btn" id="strava-btn-${idx}" onclick="publishHistoryToStrava(${idx})">Strava</button>
-                            ${getData(h.id) ? `<button class="mini-btn" onclick="openSession('${h.id}')">Relancer</button>` : ""}
-                            <button class="mini-btn" id="del-hist-${idx}" onclick="deleteHistoryEntry(${idx})">Supprimer</button>
-                            ${subHtml}
+                        <div class="hist-item">
+                            <div class="agenda-date">
+                                <div class="ad-day">${d.getDate()}</div>
+                                <div class="ad-dow">${d.toLocaleDateString('fr-FR', { weekday: 'short' })}</div>
+                            </div>
+                            <div class="hist-info">
+                                <div class="hist-name">${h.title}</div>
+                                ${meta.length ? `<div class="hist-meta">${meta.join('')}</div>` : ''}
+                            </div>
+                            <div class="hist-actions">
+                                <button class="hist-pub" onclick="shareHistoryEntry(${idx})">${ICON_SHARE}<span>Publication</span></button>
+                                ${getData(h.id) ? `<button class="icon-btn" title="Relancer la séance" aria-label="Relancer la séance" onclick="openSession('${h.id}')">${ICON_REPLAY}</button>` : ""}
+                                <button class="icon-btn danger" id="del-hist-${idx}" title="Supprimer" aria-label="Supprimer" onclick="deleteHistoryEntry(${idx})">${ICON_TRASH}</button>
+                            </div>
                         </div>`;
                 }).join("");
-                return `<div class="day-header" style="grid-column:auto; margin:15px 20px 0; padding-bottom:8px;">${monthLabel(key)} · ${groups[key].length} séance${groups[key].length > 1 ? 's' : ''}</div>${rows}`;
+                const n = groups[key].length;
+                return `<div class="hist-month"><span class="hm-name">${monthLabel(key)}</span><span class="hm-count">${n} séance${n > 1 ? 's' : ''}</span></div>${rows}`;
             }).join("");
         }
 
@@ -3548,28 +3603,6 @@
         openSessionImage(_stravaImgSession);
     }
 
-    function publishHistoryToStrava(idx) {
-        const h = history[idx];
-        if (!h) return;
-        if (!strava || !strava.refresh_token) {
-            switchScreen('settings-screen');
-            setTimeout(() => setStravaStatus('Connecte Strava ci-dessus, puis réessaie.', true), 100);
-            return;
-        }
-        const btn = document.getElementById('strava-btn-' + idx);
-        if (btn) { if (btn.disabled) return; btn.disabled = true; btn.innerText = '…'; }
-        stravaModalLoading();
-        publishToStrava(h, true).then(ok => {
-            if (btn) { btn.disabled = false; btn.innerText = 'Strava'; }
-            // Prépare la session pour l'image (mêmes données que shareHistoryEntry)
-            let ex = [];
-            if (h.exos && h.exos.length) ex = h.exos.map(e => ({ n: e.n, id: e.id, r: e.r || '' }));
-            else if (getData(h.id)) ex = getData(h.id).ex.map(e => ({ n: cleanName(e.n), r: e.r || '' }));
-            const session = { t: h.title, ex, comp: h.comp, date: h.date, realSec: h.realSec, hr: h.hr };
-            stravaModalResult(ok, ok ? null : (lastStravaError || 'Strava a refusé la publication.'), session);
-        });
-    }
-
     function shareHistoryEntry(idx) {
         const h = history[idx];
         if (!h) return;
@@ -3589,12 +3622,12 @@
         const btn = document.getElementById('del-hist-' + idx);
         if (histDeletePending !== idx) {
             histDeletePending = idx;
-            if (btn) btn.innerText = "Confirmer ?";
+            if (btn) { btn.classList.add('confirm'); btn.innerText = "Confirmer ?"; }
             setTimeout(() => {
                 if (histDeletePending === idx) {
                     histDeletePending = null;
                     const b = document.getElementById('del-hist-' + idx);
-                    if (b) b.innerText = "Supprimer";
+                    if (b) { b.classList.remove('confirm'); b.innerHTML = ICON_TRASH; }
                 }
             }, 3000);
             return;
