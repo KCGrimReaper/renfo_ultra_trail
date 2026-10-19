@@ -901,9 +901,9 @@
                         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                         <span>Télécharger</span>
                     </a>
-                    <button class="action-btn" id="share-copy-text" onclick="copySessionText()">
-                        <svg viewBox="0 0 24 24"><path d="M8 4h10a2 2 0 012 2v12M16 8H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V10a2 2 0 00-2-2z"/></svg>
-                        <span>Copier le texte</span>
+                    <button class="action-btn" id="share-strava-desc" onclick="publishShareToStravaDesc()" style="flex-basis:100%;">
+                        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                        <span>Strava : résumé en description</span>
                     </button>
                 </div>
             </div>
@@ -2662,11 +2662,12 @@
     }
 
     // Publie une séance sur Strava. 'entry' = objet d'historique (ou séance courante)
-    async function publishToStrava(entry, silent) {
+    // summaryOpts : force le résumé complet en description avec ces options de contenu
+    async function publishToStrava(entry, silent, summaryOpts) {
         if (!strava || !strava.refresh_token) { if (!silent) setStravaStatus('Connecte Strava d\'abord.', true); return; }
         const durationSec = entry.realSec || (entry.ex ? estimateListMinutes(entry.ex) * 60 : 1800);
         let desc = '';
-        if (stravaEndMode === 'desc') desc = buildSessionSummaryText(entry, loadShareOptions());
+        if (summaryOpts || stravaEndMode === 'desc') desc = buildSessionSummaryText(entry, summaryOpts || loadShareOptions());
         else {
             if (entry.exos && entry.exos.length) desc = entry.exos.map(e => '· ' + e.n).join('\n');
             else if (entry.ex && entry.ex.length) desc = entry.ex.map(e => '· ' + cleanName(e.n)).join('\n');
@@ -2728,7 +2729,7 @@
         const ex = (entry.exos && entry.exos.length) ? entry.exos
             : (entry.ex || []).map(e => ({ n: cleanName(e.n), r: e.r || '', m: e.m || '' }));
         const lines = [];
-        let head = `${ex.length} exercices`;
+        let head = `${ex.length} exercice${ex.length > 1 ? "s" : ""}`;
         if (opts.duree) {
             if (entry.realSec) head += ` · ${fmtDuration(Math.round(entry.realSec / 60))}`;
             else if (entry.ex) head += ` · ≈ ${fmtDuration(estimateListMinutes(entry.ex))}`;
@@ -3220,13 +3221,25 @@
         if (!document.querySelector('.sheet.open')) document.getElementById('sheet-overlay').classList.remove('open');
     }
 
-    async function copySessionText() {
+    // Publie la séance affichée sur Strava, avec les infos de l'image écrites dans la description
+    function publishShareToStravaDesc() {
         if (!_shareSession) return;
-        const txt = buildSessionSummaryText(_shareSession, readShareOptions());
-        const label = document.querySelector('#share-copy-text span');
-        try { await navigator.clipboard.writeText(txt); label.innerText = 'Copié ✓'; }
-        catch (e) { window.prompt('Copie le texte :', txt); }
-        setTimeout(() => { label.innerText = 'Copier le texte'; }, 1800);
+        if (!strava || !strava.refresh_token) {
+            closeShareSheet();
+            switchScreen('settings-screen');
+            setTimeout(() => setStravaStatus('Connecte Strava ci-dessus, puis réessaie.', true), 100);
+            return;
+        }
+        const btn = document.getElementById('share-strava-desc');
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const session = _shareSession, opts = readShareOptions();
+        closeShareSheet();
+        stravaModalLoading();
+        publishToStrava(session, true, opts).then(ok => {
+            btn.disabled = false;
+            stravaModalResult(ok, ok ? 'Le résumé de la séance est dans la description de ton activité.' : (lastStravaError || 'Strava a refusé la publication.'), null);
+        });
     }
 
     async function shareSessionImage() {
