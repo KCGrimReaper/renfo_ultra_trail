@@ -2098,6 +2098,13 @@
         }
     }
 
+    // Nom affiché d'un exercice en variante : le nom de la variante seul,
+    // sauf s'il est trop court pour se suffire (1 mot, ex. « Lesté ») → « Base — Variante »
+    function variantName(base, label) {
+        if (!label) return base;
+        return label.trim().split(/\s+/).length >= 2 ? label.trim() : `${base} — ${label.trim()}`;
+    }
+
     function confirmAdd(id) {
         const e = getExerciseBank().find(x => x.id === id);
         if (!e) return;
@@ -2115,7 +2122,7 @@
             if (v) {
                 entry.variantLabel = v.label;
                 entry.baseName = cleanName(e.n);
-                entry.n = `${cleanName(e.n)} — ${v.label}`;
+                entry.n = variantName(cleanName(e.n), v.label);
                 if (v.c) entry.c = v.c;
                 if (v.m) entry.m = v.m;
             }
@@ -4160,7 +4167,8 @@
         if (!base) return;
         const vIdx = +valStr;
         // Repère les séries/reps actuels pour les conserver
-        const baseName = e.baseName || cleanName(e.n);
+        // Nom de base pris dans la bibliothèque (évite d'empiler « Base — Var1 — Var2 »)
+        const baseName = e.baseName || cleanName(base.n);
         if (vIdx < 0) {
             // Retour au standard
             e.n = baseName;
@@ -4173,7 +4181,7 @@
             if (!v) return;
             e.baseName = baseName;
             e.variantLabel = v.label;
-            e.n = `${baseName} — ${v.label}`;
+            e.n = variantName(baseName, v.label);
             if (v.c) e.c = v.c;
             if (v.m) e.m = v.m;
             if (v.r) e.r = v.r;
