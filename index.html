@@ -174,10 +174,20 @@
         .search-row .text-input { flex-grow:1; width:auto; }
 
         /* --- HISTORIQUE --- */
-        .hist-month { display:flex; justify-content:space-between; align-items:baseline; padding: 22px 20px 8px; }
-        .hist-month:first-child { padding-top: 6px; }
-        .hist-month .hm-name { font-weight:900; text-transform:uppercase; font-size:0.8rem; letter-spacing:0.5px; color: var(--ink); }
+        /* Lignes simples (accueil : favoris, activité récente) */
+        .hist-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+        .hist-date { font-weight:900; font-size:0.85rem; min-width:90px; }
+        .hist-title { flex-grow:1; font-weight:700; padding: 0 10px; }
+        /* Liste de l'historique, repliable par mois */
+        .hist-month { display:flex; align-items:center; gap:10px; width:100%; padding: 16px 20px; background:none; border:none; border-top:1px solid var(--line); cursor:pointer; font-family:inherit; text-align:left; }
+        .hist-month:first-child { border-top:none; }
+        .hist-month:hover { background: #fbf9f5; }
+        .hist-month .hm-name { flex-grow:1; font-weight:900; text-transform:uppercase; font-size:0.8rem; letter-spacing:0.5px; color: var(--ink); }
         .hist-month .hm-count { font-weight:700; font-size:0.75rem; color: var(--muted); }
+        .hist-month .hm-chev { width:16px; height:16px; fill:none; stroke: var(--stone); stroke-width:2.2; transition: transform 0.2s; }
+        .hist-month.open .hm-chev { transform: rotate(180deg); }
+        .hist-month-body { display:none; }
+        .hist-month-body.open { display:block; }
         .hist-item { display:flex; align-items:center; gap:14px; padding:14px 20px; border-top:1px solid var(--line); }
         .hist-item:hover { background: #fbf9f5; }
         .hist-item .agenda-date { width:46px; }
@@ -3506,6 +3516,12 @@
     const ICON_REPLAY = '<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8M3 3v5h5"/></svg>';
     const ICON_TRASH = '<svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>';
 
+    let histOpenMonths = null; // mois dépliés (clé AAAA-MM)
+    function toggleHistMonth(key) {
+        histOpenMonths.has(key) ? histOpenMonths.delete(key) : histOpenMonths.add(key);
+        renderHistoryScreen();
+    }
+
     function renderHistoryScreen() {
         const listEl = document.getElementById('history-list');
         if (history.length === 0) {
@@ -3522,7 +3538,10 @@
                 return new Date(+y, +m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
             };
 
-            listEl.innerHTML = Object.keys(groups).sort().reverse().map(key => {
+            // Par défaut seul le mois le plus récent est déplié
+            const keys = Object.keys(groups).sort().reverse();
+            if (histOpenMonths === null) histOpenMonths = new Set([keys[0]]);
+            listEl.innerHTML = keys.map(key => {
                 const rows = groups[key].map(({ h, idx }) => {
                     const dom = historyDominant(h);
                     const d = new Date(h.date + 'T12:00:00');
@@ -3550,7 +3569,8 @@
                         </div>`;
                 }).join("");
                 const n = groups[key].length;
-                return `<div class="hist-month"><span class="hm-name">${monthLabel(key)}</span><span class="hm-count">${n} séance${n > 1 ? 's' : ''}</span></div>${rows}`;
+                const open = histOpenMonths.has(key) ? ' open' : '';
+                return `<button class="hist-month${open}" onclick="toggleHistMonth('${key}')"><span class="hm-name">${monthLabel(key)}</span><span class="hm-count">${n} séance${n > 1 ? 's' : ''}</span><svg class="hm-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="hist-month-body${open}">${rows}</div>`;
             }).join("");
         }
 
