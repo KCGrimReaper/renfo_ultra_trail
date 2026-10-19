@@ -1227,6 +1227,38 @@
         return bank.filter(e => !deletedExerciseIds.includes(e.id));
     }
 
+    // Exercice actuel correspondant à un id (suit les copies créées en éditant un exercice d'origine)
+    function findCurrentExercise(id, bank) {
+        bank = bank || getExerciseBank();
+        let cur = id;
+        for (let i = 0; i < 10 && cur; i++) {
+            const e = bank.find(x => x.id === cur);
+            if (e) return e;
+            const next = customExercises.find(x => x.replaces === cur);
+            cur = next ? next.id : null;
+        }
+        return null;
+    }
+    function canonicalExId(id, bank) { const e = findCurrentExercise(id, bank); return e ? e.id : id; }
+
+    // Nom à jour d'un exercice de l'historique (renommage de l'exercice ou de la variante pris en compte)
+    function historyExoName(x, bank) {
+        const cur = x.id ? findCurrentExercise(x.id, bank) : null;
+        if (!cur) return x.n;
+        const base = cleanName(cur.n);
+        const variants = Array.isArray(cur.variants) ? cur.variants : [];
+        let label = x.v;
+        if (!label) {
+            // Anciennes entrées : variante retrouvée depuis le nom enregistré
+            const suffix = x.n.includes(' — ') ? x.n.split(' — ').slice(1).join(' — ') : null;
+            const hit = variants.find(v => v.label && (v.label === x.n || v.label === suffix));
+            if (hit) label = hit.label;
+            else if (suffix) return x.n; // variante supprimée/renommée : on garde le nom d'époque
+        }
+        if (label) return variants.some(v => v.label === label) ? variantName(base, label) : x.n;
+        return base;
+    }
+
     // Un exercice peut avoir plusieurs catégories (tags)
     function getCats(e) {
         if (Array.isArray(e.cats) && e.cats.length) return e.cats;
@@ -1507,6 +1539,7 @@
                 n: cleanName(e.n),
                 r: e.r || '',
                 m: e.m || '',
+                v: e.variantLabel || undefined,
                 durSec: exerciseDurations[i] != null ? Math.round(exerciseDurations[i] / 1000) : null
             }))
         };
@@ -2275,8 +2308,8 @@
             if (idx >= 0) {
                 customExercises[idx] = { ...customExercises[idx], ...payload };
             } else {
-                // Exercice d'origine édité : copie perso + masquage de l'original
-                customExercises.push({ ...payload, id: 'U' + Date.now(), r: "3x10", userCreated: true });
+                // Exercice d'origine édité : copie perso (liée à l'original) + masquage de l'original
+                customExercises.push({ ...payload, id: 'U' + Date.now(), r: "3x10", userCreated: true, replaces: editingExerciseId });
                 if (!deletedExerciseIds.includes(editingExerciseId)) { deletedExerciseIds.push(editingExerciseId); saveDeletedExercises(); }
             }
         } else {
@@ -2339,10 +2372,11 @@
         }
 
         const chevron = `<svg class="chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>`;
+        const usage = exerciseUsageCounts(); // calculé une fois pour toute la liste
         listEl.innerHTML = filtered.map(e => {
             const a = getAttrs(e);
             const zones = a.zones.map(z => ZONE_LABELS[z]).join(", ");
-            const freq = isFrequentExercise(e.id) ? `<span class="freq-badge" title="Souvent utilisé">🔥</span>` : "";
+            const freq = isFrequentExercise(e.id, usage) ? `<span class="freq-badge" title="Souvent utilisé">🔥</span>` : "";
             return `
             <div class="exm-item" onclick="openExerciseDetail('${e.id}')">
                 <div class="exm-main">
@@ -2807,7 +2841,7 @@
         let desc = '';
         if (stravaDesc) desc = buildSessionSummaryText(entry, summaryOpts || loadShareOptions());
         else {
-            if (entry.exos && entry.exos.length) desc = entry.exos.map(e => '· ' + e.n).join('\n');
+            if (entry.exos && entry.exos.length) { const bank = getExerciseBank(); desc = entry.exos.map(e => '· ' + historyExoName(e, bank)).join('\n'); }
             else if (entry.ex && entry.ex.length) desc = entry.ex.map(e => '· ' + cleanName(e.n)).join('\n');
             if (entry.hr) desc += `\n\nFC moy ${entry.hr.avg} · max ${entry.hr.max}`;
         }
@@ -2871,7 +2905,8 @@
 
     // Résumé texte de la séance (mêmes infos que l'image, selon les options de contenu)
     function buildSessionSummaryText(entry, opts) {
-        const ex = (entry.exos && entry.exos.length) ? entry.exos
+        const bank = getExerciseBank();
+        const ex = (entry.exos && entry.exos.length) ? entry.exos.map(e => ({ ...e, n: historyExoName(e, bank) }))
             : (entry.ex || []).map(e => ({ n: cleanName(e.n), r: e.r || '', m: e.m || '' }));
         const lines = [];
         let head = `${ex.length} exercice${ex.length > 1 ? "s" : ""}`;
@@ -3429,11 +3464,14 @@
     // Comptage d'usage de chaque exercice (sur l'historique enrichi)
     function exerciseUsageCounts() {
         const counts = {};
+        const bank = getExerciseBank();
         history.forEach(h => {
             (h.exos || []).forEach(e => {
                 if (!e.id) return;
-                counts[e.id] = counts[e.id] || { n: e.n, count: 0 };
-                counts[e.id].count++;
+                const cid = canonicalExId(e.id, bank);
+                const cur = bank.find(x => x.id === cid);
+                counts[cid] = counts[cid] || { n: cur ? cleanName(cur.n) : e.n, count: 0 };
+                counts[cid].count++;
             });
         });
         return counts;
@@ -3449,17 +3487,18 @@
     }
 
     // Seuil "souvent utilisé" pour le badge (dynamique : au moins 3 usages)
-    function isFrequentExercise(id) {
-        const counts = exerciseUsageCounts();
+    function isFrequentExercise(id, counts) {
+        counts = counts || exerciseUsageCounts();
         return counts[id] && counts[id].count >= 3;
     }
 
     // Stats détaillées d'un exercice : nb de fois, temps moyen d'exécution, dernière fois
     function exerciseStats(id) {
         let count = 0, durSum = 0, durCount = 0, lastDate = null;
+        const bank = getExerciseBank();
         history.forEach(h => {
             (h.exos || []).forEach(e => {
-                if (e.id !== id) return;
+                if (!e.id || canonicalExId(e.id, bank) !== id) return;
                 count++;
                 if (typeof e.durSec === 'number' && e.durSec > 0) { durSum += e.durSec; durCount++; }
                 if (!lastDate || h.date > lastDate) lastDate = h.date;
@@ -3722,7 +3761,8 @@
         // Exos : stockés dans l'historique en priorité, sinon la séance d'origine si encore là
         let ex = [];
         if (h.exos && h.exos.length) {
-            ex = h.exos.map(e => ({ n: e.n, id: e.id, r: e.r || '' }));
+            const bank = getExerciseBank();
+            ex = h.exos.map(e => ({ n: historyExoName(e, bank), id: e.id, r: e.r || '', m: e.m || '' }));
         } else if (getData(h.id)) {
             ex = getData(h.id).ex.map(e => ({ n: cleanName(e.n), r: e.r || '' }));
         }
