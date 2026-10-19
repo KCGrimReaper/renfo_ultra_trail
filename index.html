@@ -1528,18 +1528,66 @@
     }
 
     // --- DURÉE ESTIMÉE ---
-    // Auto : (séries × durée d'exécution) + (repos entre séries). Ajustable via e.dur (minutes) si défini.
-    const SEC_PER_REP = 4;        // ~4s par répétition
-    const SEC_PER_SEC_HOLD = 1;   // gainage/iso : 1s = 1s
-    const REST_BETWEEN_SETS = 45; // repos entre séries (s)
+    // 1) Formule de base : séries × exécution (× 2 si unilatéral) + repos + mise en place.
+    // 2) Exercice déjà chronométré en séance guidée : on prend ton temps moyen réel.
+    // 3) Sinon la formule est corrigée par ton écart moyen réel/estimé sur tes dernières séances.
+    // Ajustable via e.dur (minutes) si défini.
+    const SEC_PER_REP = 3;         // ~3s par répétition
+    const SEC_PER_SEC_HOLD = 1;    // gainage/iso : 1s = 1s
+    const REST_BETWEEN_SETS = 45;  // repos entre séries (s)
+    const SIDE_SWITCH = 10;        // changement de côté (unilatéral)
+    const SETUP_PER_EXERCISE = 45; // lecture consigne, matériel, transition
 
-    function estimateExerciseSeconds(e) {
+    function isUnilateral(e) {
+        if (/\/\s*j/i.test(e.r || '') || /\/\s*c[ôo]t[ée]/i.test(e.r || '')) return true;
+        return getAttrs(e).uni === 'uni';
+    }
+
+    function formulaExerciseSeconds(e) {
         if (typeof e.dur === 'number' && e.dur > 0) return e.dur * 60; // override manuel (min -> s)
         const m = /^(\d+)\s*x\s*(\d+)\s*(s)?/i.exec(e.r || "");
-        if (!m) return 3 * 60; // défaut 3 min
+        if (!m) return 3 * 60 + SETUP_PER_EXERCISE; // défaut
         const series = +m[1], val = +m[2], isHold = !!m[3];
-        const workPerSet = isHold ? val * SEC_PER_SEC_HOLD : val * SEC_PER_REP;
-        return series * workPerSet + (series - 1) * REST_BETWEEN_SETS;
+        const uni = isUnilateral(e);
+        const workPerSet = (isHold ? val * SEC_PER_SEC_HOLD : val * SEC_PER_REP) * (uni ? 2 : 1) + (uni ? SIDE_SWITCH : 0);
+        return series * workPerSet + (series - 1) * REST_BETWEEN_SETS + SETUP_PER_EXERCISE;
+    }
+
+    // Données perso tirées de l'historique (mises en cache tant que l'historique ne change pas)
+    let _durCache = { key: null, perEx: {}, factor: 1 };
+    function personalDurations() {
+        const key = history.length + '|' + (history[0] ? history[0].date + (history[0].realSec || '') : '') + '|' + customExercises.length;
+        if (_durCache.key === key) return _durCache;
+        const bank = getExerciseBank();
+        const perEx = {};
+        const ratios = [];
+        history.forEach(h => {
+            let est = 0, ok = true;
+            (h.exos || []).forEach(x => {
+                const cur = x.id ? findCurrentExercise(x.id, bank) : null;
+                if (cur && typeof x.durSec === 'number' && x.durSec > 20) {
+                    const k = cur.id + '|' + (x.r || '');
+                    (perEx[k] = perEx[k] || []).push(x.durSec);
+                }
+                if (cur) est += formulaExerciseSeconds({ ...cur, r: x.r || cur.r }); else ok = false;
+            });
+            if (ok && h.realSec && est > 0 && ratios.length < 8) ratios.push(h.realSec / est);
+        });
+        Object.keys(perEx).forEach(k => {
+            const arr = perEx[k].slice(0, 5); // 5 dernières fois
+            perEx[k] = arr.reduce((a, b) => a + b, 0) / arr.length;
+        });
+        const factor = ratios.length ? Math.min(1.8, Math.max(0.7, ratios.reduce((a, b) => a + b, 0) / ratios.length)) : 1;
+        _durCache = { key, perEx, factor };
+        return _durCache;
+    }
+
+    function estimateExerciseSeconds(e) {
+        if (typeof e.dur === 'number' && e.dur > 0) return e.dur * 60;
+        const pd = personalDurations();
+        const measured = e.id ? pd.perEx[e.id + '|' + (e.r || '')] : null;
+        if (measured) return measured;
+        return formulaExerciseSeconds(e) * pd.factor;
     }
 
     function estimateListMinutes(exList) {
